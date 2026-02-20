@@ -73,7 +73,7 @@
 
 ## Bulk Upload UI
 
-<video src="./bulkupdate.mov" controls width="900"></video>
+<video src="./bulkupdate.mp4" controls width="900"></video>
 
 ## 커스텀 적용 범위
 
