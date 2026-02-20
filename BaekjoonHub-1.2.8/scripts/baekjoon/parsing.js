@@ -89,12 +89,11 @@ async function makeDetailMessageAndReadme(data) {
 
 /**
  * 문제 디렉토리명은 번호를 제거하고, Java 패키지로 사용 가능하도록 최소 정규화합니다.
- * 예: "별 찍기 - 7" -> "별찍기"
+ * 예: "별 찍기 - 7" -> "별찍기7"
  */
 function buildDirectoryTitle(title, problemId) {
   const normalizedTitle = (title || '')
     .trim()
-    .replace(/\s*[-–—:]\s*\d+\s*$/, '') // 제목 끝의 "- 7" 같은 패턴 제거
     .replace(/\s+/g, '') // 공백 제거
     .replace(/[^\p{L}\p{N}_]/gu, ''); // 문자/숫자/_ 외 제거
 
@@ -246,14 +245,17 @@ function findFromResultTable() {
 */
 function parseProblemDescription(doc = document) {
   convertImageTagAbsoluteURL(doc.getElementById('problem_description')); //이미지에 상대 경로가 있을 수 있으므로 이미지 경로를 절대 경로로 전환 합니다.
+  const title = doc.querySelector('#problem_title')?.textContent?.trim()
+    || doc.getElementsByTagName('title')[0]?.textContent?.replace(/^\s*\d+\s*번\s*-\s*/, '')?.trim()
+    || '';
   const problemId = doc.getElementsByTagName('title')[0].textContent.split(':')[0].replace(/[^0-9]/, '');
   const problem_description = unescapeHtml(doc.getElementById('problem_description').innerHTML.trim());
   const problem_input = doc.getElementById('problem_input')?.innerHTML.trim?.().unescapeHtml?.() || 'Empty'; // eslint-disable-line
   const problem_output = doc.getElementById('problem_output')?.innerHTML.trim?.().unescapeHtml?.() || 'Empty'; // eslint-disable-line
   if (problemId && problem_description) {
     log(`문제번호 ${problemId}의 내용을 저장합니다.`);
-    updateProblemsFromStats({ problemId, problem_description, problem_input, problem_output});
-    return { problemId, problem_description, problem_input, problem_output};
+    updateProblemsFromStats({ problemId, title, problem_description, problem_input, problem_output});
+    return { problemId, title, problem_description, problem_input, problem_output};
   }
   return {};
 }
@@ -312,20 +314,30 @@ async function getSolvedACById(problemId) {
 async function findProblemInfoAndSubmissionCode(problemId, submissionId) {
   log('in find with promise');
   if (!isNull(problemId) && !isNull(submissionId)) {
-    return Promise.all([getProblemDescriptionById(problemId), getSubmitCodeById(submissionId), getSolvedACById(problemId)])
-      .then(([description, code, solvedJson]) => {
-        const problem_tags = solvedJson.tags.flatMap((tag) => tag.displayNames).filter((tag) => tag.language === 'ko').map((tag) => tag.name);
-        const title = solvedJson.titleKo;
-        const level = bj_level[solvedJson.level];
+    const [descriptionResult, codeResult, solvedResult] = await Promise.allSettled([
+      getProblemDescriptionById(problemId),
+      getSubmitCodeById(submissionId),
+      getSolvedACById(problemId),
+    ]);
 
-        const { problem_description, problem_input, problem_output } = description;
-        return { problemId, submissionId, title, level, code, problem_description, problem_input, problem_output, problem_tags };
-      })
-      .catch((err) => {
-        console.log('error ocurred: ', err);
-        uploadState.uploading = false;
-        markUploadFailedCSS();
-      });
+    if (codeResult.status !== 'fulfilled' || isEmpty(codeResult.value)) {
+      throw new Error(`제출 코드 조회 실패(problemId=${problemId}, submissionId=${submissionId})`);
+    }
+
+    const description = descriptionResult.status === 'fulfilled' ? descriptionResult.value : {};
+    const solvedJson = solvedResult.status === 'fulfilled' ? solvedResult.value : null;
+
+    const problem_tags = Array.isArray(solvedJson?.tags)
+      ? solvedJson.tags.flatMap((tag) => tag.displayNames).filter((tag) => tag.language === 'ko').map((tag) => tag.name)
+      : ['분류 없음'];
+    const title = solvedJson?.titleKo || description?.title || `${problemId}`;
+    const level = bj_level[solvedJson?.level] || 'Unrated';
+    const problem_description = description?.problem_description || 'Empty';
+    const problem_input = description?.problem_input || 'Empty';
+    const problem_output = description?.problem_output || 'Empty';
+    const code = codeResult.value;
+
+    return { problemId, submissionId, title, level, code, problem_description, problem_input, problem_output, problem_tags };
   }
 }
 
@@ -404,13 +416,20 @@ async function findUniqueResultTableListByUsername(username) {
  */
 async function findResultTableListByUsername(username) {
   const result = [];
-  let doc = await findHtmlDocumentByUrl(`https://www.acmicpc.net/status?user_id=${username}&result_id=4`);
-  let next_page = doc.getElementById('next_page');
-  do {
+  let nextUrl = `https://www.acmicpc.net/status?user_id=${username}&result_id=4`;
+
+  while (!isEmpty(nextUrl)) {
+    const doc = await findHtmlDocumentByUrl(nextUrl);
     result.push(...parsingResultTableList(doc));
-    if (next_page !== null) doc = await findHtmlDocumentByUrl(next_page.getAttribute('href'));
-  } while ((next_page = doc.getElementById('next_page')) !== null);
-  result.push(...parsingResultTableList(doc));
+
+    const nextPage = doc.getElementById('next_page');
+    if (isNull(nextPage)) {
+      nextUrl = null;
+    } else {
+      const href = nextPage.getAttribute('href');
+      nextUrl = isEmpty(href) ? null : new URL(href, 'https://www.acmicpc.net').toString();
+    }
+  }
 
   return result;
 }

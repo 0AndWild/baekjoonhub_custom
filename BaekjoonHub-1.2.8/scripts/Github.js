@@ -47,6 +47,16 @@ class GitHub {
   }
 }
 
+async function fetchGithubJson(url, options, context) {
+  const res = await fetch(url, options);
+  const data = await res.json();
+  if (!res.ok) {
+    const message = data?.message || `GitHub API error (${res.status})`;
+    throw new Error(`${context}: ${message}`);
+  }
+  return data;
+}
+
 /** get a repo default branch
  * @see https://docs.github.com/en/rest/reference/repos
  * @param {string} hook - the github repository
@@ -54,14 +64,10 @@ class GitHub {
  * @return {Promise} - the promise for the branch sha
  */
 async function getDefaultBranchOnRepo(hook, token) {
-  return fetch(`https://api.github.com/repos/${hook}`, {
+  return fetchGithubJson(`https://api.github.com/repos/${hook}`, {
     method: 'GET',
     headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' },
-  })
-    .then((res) => res.json())
-    .then((data) => {
-      return data.default_branch;
-    });
+  }, 'getDefaultBranchOnRepo').then((data) => data.default_branch);
 }
 
 /** get a reference
@@ -73,15 +79,11 @@ async function getDefaultBranchOnRepo(hook, token) {
  */
 async function getReference(hook, token, branch = 'main') {
   // return fetch(`https://api.github.com/repos/${hook}/git/refs`, {
-  return fetch(`https://api.github.com/repos/${hook}/git/refs/heads/${branch}`, {
+  return fetchGithubJson(`https://api.github.com/repos/${hook}/git/refs/heads/${branch}`, {
     method: 'GET',
     headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' },
-  })
-    .then((res) => res.json())
-    .then((data) => {
-      return { refSHA: data.object.sha, ref: data.ref };
-      // return { refSHA: data[0].object.sha, ref: data[0].ref };
-    });
+  }, 'getReference')
+    .then((data) => ({ refSHA: data.object.sha, ref: data.ref }));
 }
 /** create a Blob
  * @see https://docs.github.com/en/rest/reference/git#create-a-blob
@@ -92,15 +94,12 @@ async function getReference(hook, token, branch = 'main') {
  * @return {Promise} - the promise for the tree_item object
  */
 async function createBlob(hook, token, content, path) {
-  return fetch(`https://api.github.com/repos/${hook}/git/blobs`, {
+  return fetchGithubJson(`https://api.github.com/repos/${hook}/git/blobs`, {
     method: 'POST',
     body: JSON.stringify({ content: b64EncodeUnicode(content), encoding: 'base64' }),
     headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json', 'content-type': 'application/json' },
-  })
-    .then((res) => res.json())
-    .then((data) => {
-      return { path, sha: data.sha, mode: '100644', type: 'blob' };
-    });
+  }, 'createBlob')
+    .then((data) => ({ path, sha: data.sha, mode: '100644', type: 'blob' }));
 }
 
 /** create a new tree in git
@@ -112,15 +111,12 @@ async function createBlob(hook, token, content, path) {
  * @return {Promise} - the promise for the tree sha
  */
 async function createTree(hook, token, refSHA, tree_items) {
-  return fetch(`https://api.github.com/repos/${hook}/git/trees`, {
+  return fetchGithubJson(`https://api.github.com/repos/${hook}/git/trees`, {
     method: 'POST',
     body: JSON.stringify({ tree: tree_items, base_tree: refSHA }),
     headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json', 'content-type': 'application/json' },
-  })
-    .then((res) => res.json())
-    .then((data) => {
-      return data.sha;
-    });
+  }, 'createTree')
+    .then((data) => data.sha);
 }
 
 /** create a commit in git
@@ -133,15 +129,12 @@ async function createTree(hook, token, refSHA, tree_items) {
  * @return {Promise} - the promise for the commit sha
  */
 async function createCommit(hook, token, message, treeSHA, refSHA) {
-  return fetch(`https://api.github.com/repos/${hook}/git/commits`, {
+  return fetchGithubJson(`https://api.github.com/repos/${hook}/git/commits`, {
     method: 'POST',
     body: JSON.stringify({ message, tree: treeSHA, parents: [refSHA] }),
     headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json', 'content-type': 'application/json' },
-  })
-    .then((res) => res.json())
-    .then((data) => {
-      return data.sha;
-    });
+  }, 'createCommit')
+    .then((data) => data.sha);
 }
 
 /** update a ref
@@ -154,15 +147,12 @@ async function createCommit(hook, token, message, treeSHA, refSHA) {
  * @return {Promise} - the promise for the http request
  */
 async function updateHead(hook, token, ref, commitSHA, force = true) {
-  return fetch(`https://api.github.com/repos/${hook}/git/${ref}`, {
+  return fetchGithubJson(`https://api.github.com/repos/${hook}/git/${ref}`, {
     method: 'PATCH',
     body: JSON.stringify({ sha: commitSHA, force }),
     headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json', 'content-type': 'application/json' },
-  })
-    .then((res) => res.json())
-    .then((data) => {
-      return data.sha;
-    });
+  }, 'updateHead')
+    .then((data) => data.object?.sha || data.sha || null);
 }
 
 /** get a tree recursively
@@ -172,12 +162,9 @@ async function updateHead(hook, token, ref, commitSHA, force = true) {
  * @return {Promise} - the promise for the tree items
  */
 async function getTree(hook, token) {
-  return fetch(`https://api.github.com/repos/${hook}/git/trees/HEAD?recursive=1`, {
+  return fetchGithubJson(`https://api.github.com/repos/${hook}/git/trees/HEAD?recursive=1`, {
     method: 'GET',
     headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' },
-  })
-    .then((res) => res.json())
-    .then((data) => {
-      return data.tree;
-    });
+  }, 'getTree')
+    .then((data) => data.tree);
 }

@@ -249,6 +249,8 @@ async function updateLocalStorageStats() {
       }
     });
   });
+  // 원격 상태를 기준으로 재구성해, 수동 삭제된 파일도 정확히 반영되도록 한다.
+  stats.submission = {};
   const { submission } = stats;
   tree_items.forEach((item) => {
     updateObjectDatafromPath(submission, `${hook}/${item.path}`, item.sha);
