@@ -4,15 +4,15 @@
 이 저장소는 기본 BaekjoonHub에 아래 기능을 추가한 커스텀 버전입니다.
 원본 저장소: https://github.com/BaekjoonHub/BaekjoonHub
 <p align="center">
-  <img src="BaekjoonHub-1.2.8/assets/thumbnail.png" alt="커스텀 썸네일" width="720" />
+  <img src="BaekjoonHub-1.2.8/assets/thumbnail.png" alt="커스텀 썸네일" width="300" />
 </p>
 
 ### 1) 업로드 Base Directory 지정
 <p align="center">
-  <img src="BaekjoonHub-1.2.8/assets/home.png" alt="Base Directory 설정" width="720" />
+  <img src="BaekjoonHub-1.2.8/assets/home.png" alt="Base Directory 설정" width="400" />
 </p>
 <p align="center">
-  <img src="BaekjoonHub-1.2.8/assets/success.png" alt="git repo 연동" width="720" />
+  <img src="BaekjoonHub-1.2.8/assets/success.png" alt="git repo 연동" width="400" />
 </p>
 - 배경: 기본 동작은 커밋 폴더가 항상 레포지토리 루트에 생성됨
 - 변경: 사용자가 원하는 시작 경로(예: `src/main/java/problem`)를 지정 가능
@@ -26,7 +26,7 @@
 
 ### 2) 백준 티어 경로 세분화
 <p align="center">
-  <img src="BaekjoonHub-1.2.8/assets/dir_path.png" alt="디렉토리 경로 설정" width="720" />
+  <img src="BaekjoonHub-1.2.8/assets/dir_path.png" alt="디렉토리 경로 설정" width="400" />
 </p>
 - 배경: 기존은 `Bronze/문제`처럼 대분류만 사용
 - 변경: `Bronze/V/문제`처럼 세부 티어까지 분리
@@ -74,7 +74,7 @@
 
 ## How To Use This Custom Version
 <p align="center">
-  <img src="BaekjoonHub-1.2.8/assets/chrome.png" alt="chrome extensions" width="720" />
+  <img src="BaekjoonHub-1.2.8/assets/chrome.png" alt="chrome extensions" width="400" />
 </p>
 1. Chrome에서 `chrome://extensions` 접속
 2. `개발자 모드` 활성화
@@ -83,7 +83,7 @@
    - 예: `.../BaekjoonHub-1.2.8/BaekjoonHub-1.2.8`
 5. 확장 팝업에서 레포를 연결/생성
 <p align="center">
-  <img src="BaekjoonHub-1.2.8/assets/extension.png" alt="extension popup" width="720" />
+  <img src="BaekjoonHub-1.2.8/assets/extension.png" alt="extension popup" width="400" />
 </p>
 6. `Base Directory (optional)`에 원하는 시작 경로 입력  
    - 예: `src/main/java/problem`
