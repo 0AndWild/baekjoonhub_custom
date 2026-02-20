@@ -3,11 +3,17 @@
 
 이 저장소는 기본 BaekjoonHub에 아래 기능을 추가한 커스텀 버전입니다.
 원본 저장소: https://github.com/BaekjoonHub/BaekjoonHub
-![커스텀 썸네일](BaekjoonHub-1.2.8/assets/thumbnail.png)
+<p align="center">
+  <img src="BaekjoonHub-1.2.8/assets/thumbnail.png" alt="커스텀 썸네일" width="720" />
+</p>
 
 ### 1) 업로드 Base Directory 지정
-![Base Directory 설정](BaekjoonHub-1.2.8/assets/home.png)
-![git repo 연동](BaekjoonHub-1.2.8/assets/success.png)
+<p align="center">
+  <img src="BaekjoonHub-1.2.8/assets/home.png" alt="Base Directory 설정" width="720" />
+</p>
+<p align="center">
+  <img src="BaekjoonHub-1.2.8/assets/success.png" alt="git repo 연동" width="720" />
+</p>
 - 배경: 기본 동작은 커밋 폴더가 항상 레포지토리 루트에 생성됨
 - 변경: 사용자가 원하는 시작 경로(예: `src/main/java/problem`)를 지정 가능
 - 결과: 최종 경로가 `BaseDir/플랫폼/레벨/...` 형태로 생성됨
@@ -19,7 +25,9 @@
 - `scripts/storage.js`: 실제 커밋 경로 생성 시 BaseDir prefix 적용
 
 ### 2) 백준 티어 경로 세분화
-![Base Directory 설정](BaekjoonHub-1.2.8/assets/dir_path.png)
+<p align="center">
+  <img src="BaekjoonHub-1.2.8/assets/dir_path.png" alt="디렉토리 경로 설정" width="720" />
+</p>
 - 배경: 기존은 `Bronze/문제`처럼 대분류만 사용
 - 변경: `Bronze/V/문제`처럼 세부 티어까지 분리
 - 결과: 예시 경로 `백준/Bronze/V/문제명`
@@ -65,14 +73,18 @@
 - `scripts/storage.js`: `updateLocalStorageStats()`에서 원격 기준 재구성(수동 삭제 반영)
 
 ## How To Use This Custom Version
-![chrome](BaekjoonHub-1.2.8/assets/chrome.png)
+<p align="center">
+  <img src="BaekjoonHub-1.2.8/assets/chrome.png" alt="chrome extensions" width="720" />
+</p>
 1. Chrome에서 `chrome://extensions` 접속
 2. `개발자 모드` 활성화
 3. `압축해제된 확장 프로그램을 로드합니다` 클릭
 4. `manifest.json`이 있는 폴더 선택  
    - 예: `.../BaekjoonHub-1.2.8/BaekjoonHub-1.2.8`
 5. 확장 팝업에서 레포를 연결/생성
-   ![chrome](BaekjoonHub-1.2.8/assets/extension.png)
+<p align="center">
+  <img src="BaekjoonHub-1.2.8/assets/extension.png" alt="extension popup" width="720" />
+</p>
 6. `Base Directory (optional)`에 원하는 시작 경로 입력  
    - 예: `src/main/java/problem`
 7. 백준 정답 제출 후 자동 커밋 확인
@@ -80,7 +92,9 @@
 
 ## Bulk Upload UI
 
-![벌크 업데이트](https://github.com/0AndWild/baekjoonhub_custom/blob/main/BaekjoonHub-1.2.8/assets/readme_icons/bulkUpdate.gif)
+<p align="center">
+  <img src="https://github.com/0AndWild/baekjoonhub_custom/blob/main/BaekjoonHub-1.2.8/assets/readme_icons/bulkUpdate.gif" alt="벌크 업데이트" width="720" />
+</p>
 
 ## 커스텀 적용 범위
 
