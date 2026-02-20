@@ -56,9 +56,13 @@ async function makeDetailMessageAndReadme(data) {
     + ((isNaN(score)) ? ' ' : `, Score: ${score} point `) // 서브 태스크가 있는 문제로, 점수가 있는 경우 점수까지 커밋 메시지에 표기
     + `-BaekjoonHub`;
   const category = problem_tags.join(', ');
-  const fileName = languages[language] === 'java'
+  const extension = languages[language];
+  const fileName = extension === 'java'
     ? 'Main.java'
-    : `${convertSingleCharToDoubleChar(title)}.${languages[language]}`;
+    : `${convertSingleCharToDoubleChar(title)}.${extension}`;
+  const sourceCode = extension === 'java'
+    ? addPackageDeclarationIfNeeded(code, directory)
+    : code;
   const dateInfo = submissionTime ?? getDateString(new Date(Date.now()));
   // prettier-ignore-start
   const readme = `# [${level}] ${title} - ${problemId} \n\n`
@@ -79,7 +83,7 @@ async function makeDetailMessageAndReadme(data) {
     fileName,
     message,
     readme,
-    code
+    code: sourceCode
   };
 }
 
@@ -95,6 +99,45 @@ function buildDirectoryTitle(title, problemId) {
     .replace(/[^\p{L}\p{N}_]/gu, ''); // 문자/숫자/_ 외 제거
 
   return isEmpty(normalizedTitle) ? String(problemId) : normalizedTitle;
+}
+
+function addPackageDeclarationIfNeeded(code, directory) {
+  if (isEmpty(code)) return code;
+  if (/^\s*package\s+[^;\n]+;/m.test(code)) return code;
+
+  const packageName = buildPackageNameFromDirectory(directory);
+  if (isEmpty(packageName)) return code;
+  return `package ${packageName};\n\n${code}`;
+}
+
+function buildPackageNameFromDirectory(directory) {
+  if (isEmpty(directory)) return '';
+
+  const parts = directory.split('/').filter((part) => !isEmpty(part));
+  if (parts.length === 0) return '';
+
+  let startIndex = 0;
+  for (let i = 0; i <= parts.length - 3; i += 1) {
+    if (parts[i].toLowerCase() === 'src'
+      && parts[i + 1].toLowerCase() === 'main'
+      && parts[i + 2].toLowerCase() === 'java') {
+      startIndex = i + 3;
+      break;
+    }
+  }
+
+  const packageParts = parts
+    .slice(startIndex)
+    .map((part) => sanitizeJavaPackageSegment(part))
+    .filter((part) => !isEmpty(part));
+
+  return packageParts.join('.');
+}
+
+function sanitizeJavaPackageSegment(part) {
+  const cleaned = part.replace(/[^\p{L}\p{N}_$]/gu, '');
+  if (isEmpty(cleaned)) return '';
+  return /^\d/.test(cleaned) ? `_${cleaned}` : cleaned;
 }
 
 /*
