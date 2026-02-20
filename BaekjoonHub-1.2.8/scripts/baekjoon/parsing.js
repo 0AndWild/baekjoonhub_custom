@@ -47,15 +47,18 @@ async function makeDetailMessageAndReadme(data) {
   const score = parseNumberFromString(result);
   const [tierGroup, tierLevel] = level.split(' ');
   const levelPath = tierLevel ? `${tierGroup}/${tierLevel}` : tierGroup;
+  const directoryTitle = buildDirectoryTitle(title, problemId);
   const directory = await getDirNameByOrgOption(
-    `백준/${levelPath}/${problemId}.\u2005${convertSingleCharToDoubleChar(title)}`,
+    `백준/${levelPath}/${directoryTitle}`,
     langVersionRemove(language, null)
   );
   const message = `[${level}] Title: ${title}, Time: ${runtime} ms, Memory: ${memory} KB`
     + ((isNaN(score)) ? ' ' : `, Score: ${score} point `) // 서브 태스크가 있는 문제로, 점수가 있는 경우 점수까지 커밋 메시지에 표기
     + `-BaekjoonHub`;
   const category = problem_tags.join(', ');
-  const fileName = `${convertSingleCharToDoubleChar(title)}.${languages[language]}`;
+  const fileName = languages[language] === 'java'
+    ? 'Main.java'
+    : `${convertSingleCharToDoubleChar(title)}.${languages[language]}`;
   const dateInfo = submissionTime ?? getDateString(new Date(Date.now()));
   // prettier-ignore-start
   const readme = `# [${level}] ${title} - ${problemId} \n\n`
@@ -78,6 +81,20 @@ async function makeDetailMessageAndReadme(data) {
     readme,
     code
   };
+}
+
+/**
+ * 문제 디렉토리명은 번호를 제거하고, Java 패키지로 사용 가능하도록 최소 정규화합니다.
+ * 예: "별 찍기 - 7" -> "별찍기"
+ */
+function buildDirectoryTitle(title, problemId) {
+  const normalizedTitle = (title || '')
+    .trim()
+    .replace(/\s*[-–—:]\s*\d+\s*$/, '') // 제목 끝의 "- 7" 같은 패턴 제거
+    .replace(/\s+/g, '') // 공백 제거
+    .replace(/[^\p{L}\p{N}_]/gu, ''); // 문자/숫자/_ 외 제거
+
+  return isEmpty(normalizedTitle) ? String(problemId) : normalizedTitle;
 }
 
 /*
