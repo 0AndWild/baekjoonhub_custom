@@ -2,6 +2,7 @@
 ## Custom Patch Notes (Local)
 
 이 저장소는 기본 BaekjoonHub에 아래 기능을 추가한 커스텀 버전입니다.
+원본 저장소: https://github.com/BaekjoonHub/BaekjoonHub
 
 ### 1) 업로드 Base Directory 지정
 - 배경: 기본 동작은 커밋 폴더가 항상 레포지토리 루트에 생성됨
