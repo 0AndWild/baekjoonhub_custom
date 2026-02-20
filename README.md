@@ -73,7 +73,7 @@
 
 ## Bulk Upload UI
 
-<video src="./bulkupdate.mp4" controls width="900"></video>
+![벌크 업데이트](https://github.com/0AndWild/baekjoonhub_custom/blob/main/BaekjoonHub-1.2.8/assets/readme_icons/bulkUpdate.gif)
 
 ## 커스텀 적용 범위
 
