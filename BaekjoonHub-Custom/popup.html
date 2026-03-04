@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="css/popup.css" />
+    <script src="/library/jquery-3.3.1.min.js"></script>
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.css" rel="stylesheet" />
+    <script src="/library/semantic.min.js"></script>
+  </head>
+
+  <body>
+    <div class="ui grid container">
+      <div class="sixteen wide center aligned column">
+        <h1 id="title">Baekjoon<span style="color: #0078c3">Hub</span></h1>
+        <p id="caption">Sync your code from BOJ to GitHub</p>
+        <!-- Authentication mode -->
+        <div id="auth_mode" hidden>
+          <p class="onboarding">
+            <br />
+            Authenticate with GitHub to use
+            <strong>Baekjoon<span style="color: #f18500">Hub</span></strong>
+          </p>
+          <button id="authenticate" class="ui secondary button">
+            <i class="icon github"></i>
+            Authenticate
+          </button>
+        </div>
+
+        <!-- Repo Hook mode -->
+        <div id="hook_mode" hidden>
+          <p class="onboarding">
+            <br />
+            Set up repository hook to use
+            <strong>Baekjoon<span style="color: #0078c3">Hub</span></strong>
+          </p>
+          <a id="hook_URL" href="" target="blank" class="ui secondary button">
+            <i class="icon github"></i>
+            Set up Hook
+          </a>
+        </div>
+
+        <div id="commit_mode" hidden>
+          <p id="repo_url" class="ui small header" style="margin-top: 5px; margin-bottom: 6px !important"></p>
+          <div class="ui small header commit-note" style="margin-bottom: 5px; margin-top: 0px !important">
+            Want more features?
+            <a style="color: rgb(10, 89, 92) !important" target="_blank" href="https://github.com/0AndWild/baekjoonhub_custom/issues">Request a feature!</a>
+          </div>
+
+          <div id="recommendation_panel" class="ui segment left aligned modern-panel" style="margin-top: 12px">
+            <div class="recommendation-header">
+                <div>
+                  <div class="ui tiny header recommend-title" style="margin: 0">BOJ 코테 추천</div>
+                  <p class="recommend-subtitle">요일별 유형과 난이도를 기반으로 1~10문제 추천</p>
+                </div>
+                <div class="recommend-header-actions">
+                  <button id="recommend_refresh_button" class="ui tiny button recommend-secondary-btn">다시 추천 받기</button>
+                  <button id="recommend_button" class="ui teal tiny button recommend-primary-btn">문제 추천 받기</button>
+                </div>
+              </div>
+            <p id="recommend_status" class="recommend-status"></p>
+            <div id="recommend_result" class="recommend-result"></div>
+
+            <details id="recommend_settings" class="recommend-settings" style="margin-top: 10px">
+              <summary class="recommend-settings-summary" style="cursor: pointer; font-weight: 600">요일별 추천 설정</summary>
+              <div class="recommend-basic-grid">
+                <div class="recommend-setting-row">
+                  <label for="recommend_count">추천 개수</label>
+                  <select id="recommend_count" class="ui dropdown compact">
+                    <option value="1">1문제</option>
+                    <option value="2">2문제</option>
+                    <option value="3">3문제</option>
+                    <option value="4">4문제</option>
+                    <option value="5">5문제</option>
+                    <option value="6">6문제</option>
+                    <option value="7">7문제</option>
+                    <option value="8">8문제</option>
+                    <option value="9">9문제</option>
+                    <option value="10">10문제</option>
+                  </select>
+                </div>
+                <div class="recommend-setting-row">
+                  <label for="recommend_min_level">최소 난이도</label>
+                  <select id="recommend_min_level" class="ui dropdown compact"></select>
+                </div>
+                <div class="recommend-setting-row">
+                  <label for="recommend_max_level">최대 난이도</label>
+                  <select id="recommend_max_level" class="ui dropdown compact"></select>
+                </div>
+              </div>
+              <div id="weekday_tag_rows"></div>
+              <div class="recommend-setting-actions">
+                <button id="reset_recommend_weekday_tags" class="ui mini button">유형 추천조합 초기화</button>
+                <button id="save_recommend_settings" class="ui mini button">설정 저장</button>
+                <button id="load_recommend_settings" class="ui mini button">설정 불러오기</button>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <!-- 기능 on/off -->
+        <div style="margin-top: 10px">
+          <input type="checkbox" id="onffbox" />
+          <label for="onffbox" id="onffmain">
+            <span id="onffball"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Generate Socials -->
+      <div id="socials" class="sixteen wide column">
+        <a title="BaekjoonHub GitHub" href="https://github.com/0AndWild/baekjoonhub_custom" target="_blank"><i class="ui black github icon"></i></a>
+        <a title="Email" href="mailto:parkky3563@gmail.com" target="_blank"><i class="ui red envelope icon"></i></a>
+        <a title="Patch Notes" href="https://github.com/0AndWild/baekjoonhub_custom/blob/main/README.md" target="_blank"><i class="ui list alternate outline icon"></i></a>
+        <a title="BaekjoonHub Home" id="welcome_URL" href="" target="_blank"><i class="ui grey home icon"></i></a>
+      </div>
+    </div>
+
+    <script src="scripts/oauth2.js"></script>
+    <script type="text/javascript" src="popup.js"></script>
+  </body>
+</html>
