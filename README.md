@@ -1,18 +1,33 @@
 
+
 ## Custom Patch Notes (Local)
 
-이 저장소는 기본 BaekjoonHub에 아래 기능을 추가한 커스텀 버전입니다.
+이 저장소는 기본 BaekjoonHub에 있었으면 하는 기능들을 추가한 커스텀 버전입니다. 이 저장소를 가져다가 추가적인 커스텀을 하셔도 좋고, 좋은 아이디어나 추가 기능에 대한 의견이 있다면 Issue 에 남겨주시면 감사하겠습니다. =) 
+
+`해당 커스텀 버전은 baekjoonHub 1.2.8 버전을 기준으로 만들어졌습니다.`
+
 원본 저장소: https://github.com/BaekjoonHub/BaekjoonHub
+커스텀 저장소: https://github.com/0AndWild/baekjoonhub_custom
+
+
+## Version Highlights
+
+| Version | 주요 업데이트 | 포함 항목(요약) |
+|---|---|---|
+| `1.0.0` | 커스텀 업로드 구조/자동화 정비 | Base Directory 지정, 백준 분류+세부 티어 경로 세분화, 문제 디렉토리명 정규화, Java `Main.java` 고정 + `package` 자동 삽입, 백준 맞은 문제 전체 일괄 업로드 |
+| `1.1.0` | 코테용 요일별 문제 추천 기능 추가 | 팝업 추천 패널, 요일별 유형(태그) 설정, 난이도 범위 + 추천 개수(`1~10`) 설정, 업로드 문제 제외 추천, 추천 결과 캐시 + `다시 추천 받기`, 추천 설정 원격 저장/불러오기(`baekjoon/extension/setting.json`), 유형 추천조합 초기화 버튼 |
+
+
 <p align="center">
-  <img src="BaekjoonHub-1.2.8/assets/thumbnail.png" alt="커스텀 썸네일" width="300" />
+  <img src="BaekjoonHub-Custom/assets/thumbnail.png" alt="커스텀 썸네일" width="300" />
 </p>
 
 ### 1) 업로드 Base Directory 지정
 <p align="center">
-  <img src="BaekjoonHub-1.2.8/assets/home.png" alt="Base Directory 설정" width="400" />
+  <img src="BaekjoonHub-Custom/assets/home.png" alt="Base Directory 설정" width="400" />
 </p>
 <p align="center">
-  <img src="BaekjoonHub-1.2.8/assets/success.png" alt="git repo 연동" width="400" />
+  <img src="BaekjoonHub-Custom/assets/success.png" alt="git repo 연동" width="400" />
 </p>
 - 배경: 기본 동작은 커밋 폴더가 항상 레포지토리 루트에 생성됨
 - 변경: 사용자가 원하는 시작 경로(예: `src/main/java/problem`)를 지정 가능
@@ -26,7 +41,7 @@
 
 ### 2) 백준 티어 경로 세분화
 <p align="center">
-  <img src="BaekjoonHub-1.2.8/assets/dir_path.png" alt="디렉토리 경로 설정" width="400" />
+  <img src="BaekjoonHub-Custom/assets/dir_path.png" alt="디렉토리 경로 설정" width="400" />
 </p>
 - 배경: 기존은 `Bronze/문제`처럼 대분류만 사용
 - 변경: `분류/Bronze/V/문제`처럼 분류 + 세부 티어까지 분리
@@ -73,28 +88,61 @@
 - `scripts/baekjoon/uploadfunctions.js`: `uploadBulkSolveProblemsOnGit()`으로 1회 bulk commit 수행
 - `scripts/storage.js`: `updateLocalStorageStats()`에서 원격 기준 재구성(수동 삭제 반영)
 
+### 6) 코테용 요일별 문제 추천 (팝업)
+
+<p align="center">
+  <img src="BaekjoonHub-Custom/assets/recommend1.png" alt="문제추천 설정" width="400" />
+</p>
+<p align="center">
+  <img src="BaekjoonHub-Custom/assets/recommend2.png" alt="문제추천" width="400" />
+</p>
+
+- 배경: 특정 유형만 반복하면 다른 유형 감각이 떨어지기 쉬움
+- 변경:
+  - 확장 팝업에 `문제 추천 받기` + `다시 추천 받기` 버튼 추가
+  - 요일별 유형 설정을 `선택 + 태그 칩` 방식으로 제공
+  - 추천 개수 `1~10`개, 난이도 범위(기본 `Silver IV ~ Gold II`) 설정 가능
+  - 추천 결과에 문제 링크, 태그(유형) 링크, 난이도(solved.ac) 링크 표시
+  - 추천 패널 UI/UX를 모던 스타일로 개편하고 긴 로그 텍스트 줄바꿈 처리
+- 로직:
+  - BOJ 태그 페이지(`https://www.acmicpc.net/problem/tags`)를 기준으로 태그를 파싱
+  - GitHub 저장소 트리/README를 조회해 이미 업로드된 문제 번호를 추출
+  - 이미 업로드된 문제를 제외하고 요일 설정 + 난이도 범위에 맞게 추천
+  - 추천 시 요일 유형에서 랜덤 샘플링(중복 최소화) 후 유형별 페이지를 순환 조회
+  - 같은 날/같은 설정이면 캐시 재사용, `다시 추천 받기`는 캐시 무시 후 재생성
+  - 추천 설정은 연결된 저장소의 `.../baekjoon/extension/setting.json`에 저장/불러오기 지원
+
+적용 코드:
+- `popup.html`: 추천 버튼/결과/요일별 설정 UI 추가
+- `popup.js`: 추천 로직, GitHub 제외 로직, 캐시/강제 재추천 로직, 태그/난이도 파싱 로직 추가
+- `css/popup.css`: 추천 패널 스타일 추가
+- `manifest.json`, `rules.json`, `scripts/background.js`: BOJ/solved.ac 요청 권한 및 수집 보강
+
 ## How To Use This Custom Version
 <p align="center">
-  <img src="BaekjoonHub-1.2.8/assets/chrome.png" alt="chrome extensions" width="400" />
+  <img src="BaekjoonHub-Custom/assets/chrome.png" alt="chrome extensions" width="400" />
 </p>
 1. Chrome에서 `chrome://extensions` 접속
 2. `개발자 모드` 활성화
 3. `압축해제된 확장 프로그램을 로드합니다` 클릭
 4. `manifest.json`이 있는 폴더 선택  
-   - 예: `.../BaekjoonHub-1.2.8/BaekjoonHub-1.2.8`
+   - 예: `.../BaekjoonHub-Custom/BaekjoonHub-Custom`
 5. 확장 팝업에서 레포를 연결/생성
 <p align="center">
-  <img src="BaekjoonHub-1.2.8/assets/extension.png" alt="extension popup" width="400" />
+  <img src="BaekjoonHub-Custom/assets/extension.png" alt="extension popup" width="400" />
 </p>
 6. `Base Directory (optional)`에 원하는 시작 경로 입력  
    - 예: `src/main/java/problem`
 7. 백준 정답 제출 후 자동 커밋 확인
 8. 백준 내 계정 status 페이지(`https://www.acmicpc.net/status?user_id=내아이디`)에서 `BaekjoonHub 전체 업로드` 버튼으로 과거 정답 일괄 업로드
+9. 확장 팝업의 추천 패널에서 설정 후 `문제 추천 받기` 실행
+10. 마음에 들지 않으면 `다시 추천 받기`로 캐시를 무시하고 새 추천 생성
+11. 다른 크롬 계정/환경에서는 `설정 불러오기`로 원격 `setting.json` 설정 복원
 
 ## Bulk Upload UI
 
 <p align="center">
-  <img src="https://github.com/0AndWild/baekjoonhub_custom/blob/main/BaekjoonHub-1.2.8/assets/readme_icons/bulkUpdate.gif" alt="벌크 업데이트" width="720" />
+  <img src="https://github.com/0AndWild/baekjoonhub_custom/blob/main/BaekjoonHub-Custom/assets/readme_icons/bulkUpdate.gif" alt="벌크 업데이트" width="720" />
 </p>
 
 ## 커스텀 적용 범위
@@ -161,3 +209,4 @@
 - Java의 경우 기존 코드에 `package` 선언이 이미 있으면 중복 삽입하지 않습니다.
 - 일괄 업로드는 맞은 문제 수에 따라 시간이 오래 걸릴 수 있으며, 버튼에서 진행률을 표시합니다.
 - 일괄 업로드 진행률은 파일 수가 아니라 대상 문제 수(`문제 처리 n/총문제수`) 기준으로 표시됩니다.
+- 문제 추천 설정 원격 파일 기본 경로는 저장소 내 `baekjoon/extension/setting.json`입니다.

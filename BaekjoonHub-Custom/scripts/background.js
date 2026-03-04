@@ -7,6 +7,26 @@ async function SolvedApiCall(problemId) {
     .then((query) => query.json());
 }
 
+async function FetchText(url) {
+  const res = await fetch(url, {
+    method: 'GET',
+    credentials: 'include',
+    cache: 'no-store',
+    redirect: 'follow',
+  });
+
+  const text = await res.text();
+  return {
+    ok: res.ok,
+    status: res.status,
+    redirected: res.redirected,
+    finalUrl: res.url,
+    contentType: res.headers.get('content-type') || '',
+    contentLength: res.headers.get('content-length') || '',
+    text,
+  };
+}
+
 function handleMessage(request, sender, sendResponse) {
   if (request && request.closeWebPage === true && request.isSuccess === true) {
     /* Set username */
@@ -43,6 +63,13 @@ function handleMessage(request, sender, sendResponse) {
   } else if (request && request.sender == "baekjoon" && request.task == "SolvedApiCall") {
     SolvedApiCall(request.problemId).then((res) => sendResponse(res));
     //sendResponse(SolvedApiCall(request.problemId))
+  } else if (request && request.sender === 'popup' && request.task === 'FetchText') {
+    FetchText(request.url)
+      .then((res) => sendResponse({ success: true, ...res }))
+      .catch((error) => sendResponse({
+        success: false,
+        error: error?.message || String(error),
+      }));
   }
   return true;
 }

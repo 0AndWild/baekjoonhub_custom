@@ -33,12 +33,15 @@
     "declarativeNetRequestWithHostAccess"
   ],
   "host_permissions": [
-    "https://www.acmicpc.net/",
-    "https://school.programmers.co.kr/",
-    "https://github.com/",
-    "https://swexpertacademy.com/",
+    "https://www.acmicpc.net/*",
+    "http://www.acmicpc.net/*",
+    "https://school.programmers.co.kr/*",
+    "https://github.com/*",
+    "https://api.github.com/*",
+    "https://swexpertacademy.com/*",
     "https://solved.ac/api/v3/*",
-    "https://level.goorm.io/"
+    "https://solved.ac/*",
+    "https://level.goorm.io/*"
   ],
   "web_accessible_resources": [
     {
