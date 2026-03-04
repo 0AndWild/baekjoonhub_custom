@@ -29,8 +29,8 @@
   <img src="BaekjoonHub-1.2.8/assets/dir_path.png" alt="디렉토리 경로 설정" width="400" />
 </p>
 - 배경: 기존은 `Bronze/문제`처럼 대분류만 사용
-- 변경: `Bronze/V/문제`처럼 세부 티어까지 분리
-- 결과: 예시 경로 `백준/Bronze/V/문제명`
+- 변경: `분류/Bronze/V/문제`처럼 분류 + 세부 티어까지 분리
+- 결과: 예시 경로 `baekjoon/구현/Bronze/V/문제명` (분류가 없으면 `uncategorized`)
 
 적용 코드:
 - `scripts/baekjoon/parsing.js`: `level` 값을 `tierGroup/tierLevel`로 분리해서 경로 생성
@@ -38,7 +38,7 @@
 ### 3) 백준 문제 디렉토리명 정규화
 - 배경: `2444. 별 찍기 - 7` 형태는 Java 패키지 경로로 바로 사용하기 어려움
 - 변경: 디렉토리명에서 문제번호/공백/불필요 특수문자를 제거해 문제명 중심으로 생성
-- 결과: `백준/Bronze/III/2444. 별 찍기 - 7` 대신 `백준/Bronze/III/별찍기7`
+- 결과: `baekjoon/구현/Bronze/III/2444. 별 찍기 - 7` 대신 `baekjoon/구현/Bronze/III/별찍기7`
 
 적용 코드:
 - `scripts/baekjoon/parsing.js`: `buildDirectoryTitle()`로 디렉토리명 정규화
@@ -50,8 +50,8 @@
   - Java 코드 상단에 `package ...;` 선언을 디렉토리 기반으로 자동 삽입
 - 결과:
   - 파일명 불일치 문제 해소
-  - 예: `src/main/java/problem/백준/Bronze/III/별찍기7/Main.java`
-  - 예: `package problem.백준.Bronze.III.별찍기7;`
+  - 예: `src/main/java/problem/baekjoon/구현/Bronze/III/별찍기7/Main.java`
+  - 예: `package problem.baekjoon.구현.Bronze.III.별찍기7;`
 
 적용 코드:
 - `scripts/baekjoon/parsing.js`: Java 확장자일 때 `Main.java` 강제 및 `addPackageDeclarationIfNeeded()` 적용
@@ -62,6 +62,7 @@
 - 동작:
   - 중복 제출은 SHA 비교로 자동 스킵
   - 맞은 문제(AC)만 대상으로 전체 페이지를 순회
+  - 폴더 구조는 `baekjoon/분류/티어/레벨/문제` 순서로 생성
   - 같은 문제 정답이 여러 개면 성능 기준(시간 → 메모리 → 코드 길이 → 제출번호)으로 1개 선택
   - 변경 대상만 모은 뒤 GitHub에 1회 bulk commit 수행
   - 완료 후 성공/스킵/실패 개수 요약 표시
@@ -100,7 +101,7 @@
 
 ### 공통 적용 (언어 무관)
 1. 업로드 Base Directory 지정
-2. 백준 티어 경로 세분화
+2. 백준 분류/티어 경로 세분화
 3. 문제 디렉토리명 정규화
 4. 백준 맞은 문제 전체 업로드(AC 수집/중복 선택/일괄 커밋)
 
@@ -146,16 +147,17 @@
 ## Path Examples
 
 - BaseDir 미사용:
-  - `백준/Bronze/V/별찍기7/...`
+  - `baekjoon/구현/Bronze/V/별찍기7/...`
 - BaseDir 사용(`src/main/java/problem`):
-  - `src/main/java/problem/백준/Bronze/V/별찍기7/Main.java`
-  - Java 코드 상단: `package problem.백준.Bronze.V.별찍기7;`
+  - `src/main/java/problem/baekjoon/구현/Bronze/V/별찍기7/Main.java`
+  - Java 코드 상단: `package problem.baekjoon.구현.Bronze.V.별찍기7;`
 
 ## Notes
 
 - 기존에 이미 올라간 폴더 구조는 자동으로 이동되지 않습니다.
 - 새 제출부터 커스텀 경로 규칙이 반영됩니다.
 - Base Directory는 앞/뒤 `/`를 자동 정리합니다.
+- 문제 분류 태그가 없는 경우 폴더는 `uncategorized`로 생성됩니다.
 - Java의 경우 기존 코드에 `package` 선언이 이미 있으면 중복 삽입하지 않습니다.
 - 일괄 업로드는 맞은 문제 수에 따라 시간이 오래 걸릴 수 있으며, 버튼에서 진행률을 표시합니다.
 - 일괄 업로드 진행률은 파일 수가 아니라 대상 문제 수(`문제 처리 n/총문제수`) 기준으로 표시됩니다.

@@ -47,9 +47,10 @@ async function makeDetailMessageAndReadme(data) {
   const score = parseNumberFromString(result);
   const [tierGroup, tierLevel] = level.split(' ');
   const levelPath = tierLevel ? `${tierGroup}/${tierLevel}` : tierGroup;
+  const categoryPath = buildCategoryDirectoryName(problem_tags);
   const directoryTitle = buildDirectoryTitle(title, problemId);
   const directory = await getDirNameByOrgOption(
-    `백준/${levelPath}/${directoryTitle}`,
+    `baekjoon/${categoryPath}/${levelPath}/${directoryTitle}`,
     langVersionRemove(language, null)
   );
   const message = `[${level}] Title: ${title}, Time: ${runtime} ms, Memory: ${memory} KB`
@@ -98,6 +99,22 @@ function buildDirectoryTitle(title, problemId) {
     .replace(/[^\p{L}\p{N}_]/gu, ''); // 문자/숫자/_ 외 제거
 
   return isEmpty(normalizedTitle) ? String(problemId) : normalizedTitle;
+}
+
+/**
+ * 분류 폴더명은 첫 번째 분류를 사용하며, 없는 경우 'uncategorized'를 사용합니다.
+ */
+function buildCategoryDirectoryName(problemTags) {
+  const rawCategory = Array.isArray(problemTags) && problemTags.length > 0
+    ? problemTags[0]
+    : 'uncategorized';
+
+  const normalizedCategory = String(rawCategory)
+    .trim()
+    .replace(/\s+/g, '')
+    .replace(/[^\p{L}\p{N}_]/gu, '');
+
+  return isEmpty(normalizedCategory) ? 'uncategorized' : normalizedCategory;
 }
 
 function addPackageDeclarationIfNeeded(code, directory) {
