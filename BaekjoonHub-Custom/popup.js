@@ -113,8 +113,9 @@ $('#authenticate').on('click', () => {
 });
 
 /* Get URL for welcome page */
-$('#welcome_URL').attr('href', 'https://github.com/0AndWild/baekjoonhub_custom');
-$('#hook_URL').attr('href', `chrome-extension://${chrome.runtime.id}/welcome.html`);
+const welcomePageUrl = `chrome-extension://${chrome.runtime.id}/welcome.html`;
+$('#welcome_URL').attr('href', welcomePageUrl);
+$('#hook_URL').attr('href', welcomePageUrl);
 
 initializeRecommendationUI();
 
