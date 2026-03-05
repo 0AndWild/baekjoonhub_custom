@@ -97,6 +97,7 @@ const DEFAULT_RECOMMEND_SETTINGS = {
   count: 3,
   minLevel: 7,
   maxLevel: 14,
+  excludeNonKorean: true,
   weekdayTags: DEFAULT_WEEKDAY_TAGS,
 };
 
@@ -253,7 +254,9 @@ function initializeRecommendationFeature() {
     recommendProblems({ forceRefresh: true });
   });
 
-  setRecommendStatus('요일별 설정을 확인한 뒤 "문제 추천 받기" 또는 "다시 추천 받기"를 눌러주세요.');
+  setRecommendActionButtonMode(false);
+  setRecommendStatus('캐시된 추천을 확인하는 중...');
+  hydrateRecommendationFromCacheOnOpen();
 }
 
 async function recommendProblems(options = {}) {
@@ -278,6 +281,7 @@ async function recommendProblems(options = {}) {
 
     if (!forceRefresh && isValidRecommendationCache(cache, cacheDate, dayKey, configHash)) {
       renderRecommendationResult(cache.items);
+      setRecommendActionButtonMode(true);
       setRecommendStatus(`${dayLabel} 추천 캐시를 보여주고 있습니다. (${cache.items.length}문제)`);
       return;
     }
@@ -333,6 +337,7 @@ async function recommendProblems(options = {}) {
 
     await setStorageLocal({ [RECOMMEND_CACHE_KEY]: payload });
     renderRecommendationResult(recommendations);
+    setRecommendActionButtonMode(true);
 
     const shortageMessage = recommendations.length < settings.count
       ? ` 요청 ${settings.count}개 중 ${recommendations.length}개만 추천되었습니다.`
@@ -355,10 +360,36 @@ async function recommendProblems(options = {}) {
     } else {
       setRecommendStatus(`추천 실패: ${currentStep} 단계 - ${rawMessage}${urlMessage}${statsMessage}`);
     }
+    setRecommendActionButtonMode(false);
     renderRecommendationResult([]);
   } finally {
     setRecommendationLoading(false, '문제 추천 받기');
   }
+}
+
+async function hydrateRecommendationFromCacheOnOpen() {
+  try {
+    const settings = await loadRecommendationSettings();
+    const dayKey = getTodayDayKey();
+    const dayLabel = WEEKDAY_LABELS[dayKey];
+    const cacheDate = getDateKey();
+    const configHash = hashRecommendationSettings(settings);
+    const cacheObj = await getStorageLocal([RECOMMEND_CACHE_KEY]);
+    const cache = cacheObj[RECOMMEND_CACHE_KEY];
+
+    if (isValidRecommendationCache(cache, cacheDate, dayKey, configHash)) {
+      renderRecommendationResult(cache.items);
+      setRecommendActionButtonMode(true);
+      setRecommendStatus(`${dayLabel} 추천 캐시를 바로 표시했습니다. (${cache.items.length}문제)`);
+      return;
+    }
+  } catch (error) {
+    console.log('Failed to hydrate recommendation cache', error);
+  }
+
+  setRecommendActionButtonMode(false);
+  setRecommendStatus('요일별 설정을 확인한 뒤 "문제 추천 받기"를 눌러주세요.');
+  renderRecommendationResult([]);
 }
 
 function setRecommendationLoading(loading, label) {
@@ -368,6 +399,16 @@ function setRecommendationLoading(loading, label) {
   button.prop('disabled', loading);
   button.text(label);
   refreshButton.prop('disabled', loading);
+}
+
+function setRecommendActionButtonMode(hasCachedResult) {
+  const showRecommendButton = !hasCachedResult;
+  if (showRecommendButton) {
+    $('#recommend_button').show();
+  } else {
+    $('#recommend_button').hide();
+  }
+  $('#recommend_refresh_button').show();
 }
 
 function setSettingsActionLoading(loading) {
@@ -508,6 +549,7 @@ function applyRecommendationSettingsToUI(settings) {
   $('#recommend_count').val(String(settings.count));
   $('#recommend_min_level').val(String(settings.minLevel));
   $('#recommend_max_level').val(String(settings.maxLevel));
+  $('#recommend_exclude_non_korean').prop('checked', Boolean(settings.excludeNonKorean));
 
   const nextSelections = createDefaultWeekdayTagSelections();
   WEEKDAY_ORDER.forEach((dayKey) => {
@@ -522,6 +564,7 @@ function collectRecommendationSettingsFromUI() {
   const count = normalizeRecommendCount(Number($('#recommend_count').val()));
   let minLevel = Number($('#recommend_min_level').val());
   let maxLevel = Number($('#recommend_max_level').val());
+  const excludeNonKorean = $('#recommend_exclude_non_korean').is(':checked');
 
   if (Number.isNaN(minLevel)) minLevel = DEFAULT_RECOMMEND_SETTINGS.minLevel;
   if (Number.isNaN(maxLevel)) maxLevel = DEFAULT_RECOMMEND_SETTINGS.maxLevel;
@@ -536,7 +579,13 @@ function collectRecommendationSettingsFromUI() {
     weekdayTags[dayKey] = normalizeTagArray(weekdayTagSelections[dayKey]);
   });
 
-  return mergeRecommendationSettings({ count, minLevel, maxLevel, weekdayTags });
+  return mergeRecommendationSettings({
+    count,
+    minLevel,
+    maxLevel,
+    excludeNonKorean,
+    weekdayTags,
+  });
 }
 
 function mergeRecommendationSettings(raw) {
@@ -544,6 +593,9 @@ function mergeRecommendationSettings(raw) {
     count: normalizeRecommendCount(Number(raw?.count)),
     minLevel: Number.isInteger(raw?.minLevel) ? raw.minLevel : DEFAULT_RECOMMEND_SETTINGS.minLevel,
     maxLevel: Number.isInteger(raw?.maxLevel) ? raw.maxLevel : DEFAULT_RECOMMEND_SETTINGS.maxLevel,
+    excludeNonKorean: typeof raw?.excludeNonKorean === 'boolean'
+      ? raw.excludeNonKorean
+      : DEFAULT_RECOMMEND_SETTINGS.excludeNonKorean,
     weekdayTags: {},
   };
 
@@ -738,6 +790,7 @@ function hashRecommendationSettings(settings) {
     count: settings.count,
     minLevel: settings.minLevel,
     maxLevel: settings.maxLevel,
+    excludeNonKorean: Boolean(settings.excludeNonKorean),
     weekdayTags: normalizedTags,
   });
 }
@@ -927,6 +980,7 @@ async function buildRecommendations(tags, settings, solvedProblemIds) {
     pages: [],
     totals: {
       rows: 0,
+      excludedNonKorean: 0,
       excludedSolved: 0,
       duplicateInTag: 0,
       added: 0,
@@ -1041,6 +1095,7 @@ async function fillTagStateOnePage(state, settings, solvedProblemIds, maxPagePer
     state.done = true;
   }
   const items = Array.isArray(pageResult.items) ? pageResult.items : [];
+  let excludedNonKorean = 0;
   let excludedSolved = 0;
   let duplicateInTag = 0;
   let added = 0;
@@ -1048,6 +1103,12 @@ async function fillTagStateOnePage(state, settings, solvedProblemIds, maxPagePer
 
   items.forEach((item) => {
     const problemId = String(item.problemId);
+    const title = String(item.title || '');
+    if (settings.excludeNonKorean && !hasKoreanText(title)) {
+      excludedNonKorean += 1;
+      return;
+    }
+
     if (solvedProblemIds.has(problemId)) {
       excludedSolved += 1;
       if (solvedMatchedSample.length < 5) {
@@ -1092,6 +1153,7 @@ async function fillTagStateOnePage(state, settings, solvedProblemIds, maxPagePer
       hasProblemsetTable: Boolean(pageResult.hasProblemsetTable),
       anchorCount: Number(pageResult.anchorCount || 0),
       raw: items.length,
+      excludedNonKorean,
       excludedSolved,
       duplicateInTag,
       added,
@@ -1102,6 +1164,7 @@ async function fillTagStateOnePage(state, settings, solvedProblemIds, maxPagePer
     }
 
     debugStats.totals.rows += items.length;
+    debugStats.totals.excludedNonKorean += excludedNonKorean;
     debugStats.totals.excludedSolved += excludedSolved;
     debugStats.totals.duplicateInTag += duplicateInTag;
     debugStats.totals.added += added;
@@ -1421,10 +1484,10 @@ function formatCandidateStatsDebug(stats) {
     const mode = `,파서=${page.parserMode || 'unknown'}`;
     const shape = `,html=${page.htmlLength || 0},table=${page.hasProblemsetTable ? 1 : 0},a=${page.anchorCount || 0}`;
     const response = `,src=${page.fetchSource || 'unknown'},st=${page.responseStatus || 0},ct=${page.responseContentType || '-'},cl=${page.responseContentLength || '-'}`;
-    return `${page.tagName}#${page.page}(원본${page.raw},기풀이제외${page.excludedSolved},중복제외${page.duplicateInTag},추가${page.added}${mode}${shape}${response}${sample})`;
+    return `${page.tagName}#${page.page}(원본${page.raw},비한글제외${page.excludedNonKorean || 0},기풀이제외${page.excludedSolved},중복제외${page.duplicateInTag},추가${page.added}${mode}${shape}${response}${sample})`;
   }).join(' | ');
 
-  const totalsPart = ` solvedSet=${solvedSetSize},전체원본=${totals.rows || 0},전체기풀이제외=${totals.excludedSolved || 0},전체중복제외=${totals.duplicateInTag || 0},전체후보추가=${totals.added || 0}`;
+  const totalsPart = ` solvedSet=${solvedSetSize},전체원본=${totals.rows || 0},전체비한글제외=${totals.excludedNonKorean || 0},전체기풀이제외=${totals.excludedSolved || 0},전체중복제외=${totals.duplicateInTag || 0},전체후보추가=${totals.added || 0}`;
   const tagsPart = sampledTags ? `,샘플유형=${sampledTags}` : '';
   const pagesPart = pageSummary ? `,최근페이지=${pageSummary}` : '';
 
@@ -1606,6 +1669,10 @@ function stripHtmlTags(text) {
     .replace(/&gt;/gi, '>')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function hasKoreanText(text) {
+  return /[가-힣]/.test(String(text || ''));
 }
 
 async function fetchTextViaBackground(url) {
