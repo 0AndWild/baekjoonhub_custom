@@ -121,10 +121,6 @@ $('#authenticate').on('click', () => {
   }
 });
 
-/* Get URL for welcome page */
-const welcomePageUrl = `chrome-extension://${chrome.runtime.id}/welcome.html`;
-$('#welcome_URL').attr('href', welcomePageUrl);
-
 initializeRecommendationUI();
 initializeRepoManageUI();
 

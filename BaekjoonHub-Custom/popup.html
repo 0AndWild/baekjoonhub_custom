@@ -73,33 +73,31 @@
         </div>
 
         <div id="commit_mode" hidden>
-          <div class="repo-top-row">
-            <div class="repo-linked-info">
-              <p id="repo_url" class="ui small header"></p>
-              <p id="repo_dir" class="repo-dir-line"></p>
-            </div>
-            <div class="repo-top-actions">
-              <div class="auto-upload-inline">
-                <div class="auto-upload-head">
-                  <span class="auto-upload-label">자동 업로드</span>
-                  <div class="auto-upload-switch">
-                    <input type="checkbox" id="onffbox" />
-                    <label for="onffbox" id="onffmain">
-                      <span id="onffball"></span>
-                    </label>
+          <div id="repo_summary_panel" class="ui segment left aligned modern-panel repo-summary-panel">
+            <div class="repo-top-row">
+              <div class="repo-linked-info">
+                <p id="repo_url" class="ui small header"></p>
+                <p id="repo_dir" class="repo-dir-line"></p>
+              </div>
+              <div class="repo-top-actions">
+                <div class="auto-upload-inline">
+                  <div class="auto-upload-head">
+                    <span class="auto-upload-label">자동 업로드</span>
+                    <div class="auto-upload-switch">
+                      <input type="checkbox" id="onffbox" />
+                      <label for="onffbox" id="onffmain">
+                        <span id="onffball"></span>
+                      </label>
+                    </div>
                   </div>
+                  <p class="auto-upload-help">정답 제출 시 코드를 GitHub에 자동 업로드합니다.</p>
                 </div>
-                <p class="auto-upload-help">정답 제출 시 코드를 GitHub에 자동 업로드합니다.</p>
-              </div>
-              <div class="repo-top-action-buttons">
-                <button id="repo_unlink_button" class="ui tiny button repo-unlink-btn">Repo 연결 해제</button>
-                <button id="github_disconnect_button" class="ui tiny button github-disconnect-btn">GitHub 연결 해제</button>
+                <div class="repo-top-action-buttons">
+                  <button id="repo_unlink_button" class="ui tiny button repo-unlink-btn">Repo 연결 해제</button>
+                  <button id="github_disconnect_button" class="ui tiny button github-disconnect-btn">GitHub 연결 해제</button>
+                </div>
               </div>
             </div>
-          </div>
-          <div class="ui small header commit-note" style="margin-bottom: 5px; margin-top: 0px !important">
-            Want more features?
-            <a style="color: rgb(10, 89, 92) !important" target="_blank" href="https://github.com/0AndWild/baekjoonhub_custom/issues">Request a feature!</a>
           </div>
 
           <div id="recommendation_panel" class="ui segment left aligned modern-panel" style="margin-top: 12px">
@@ -158,6 +156,10 @@
               </div>
             </details>
           </div>
+          <div class="ui small header commit-note" style="margin-top: 8px !important; margin-bottom: 0 !important">
+            Want more features?
+            <a style="color: rgb(10, 89, 92) !important" target="_blank" href="https://github.com/0AndWild/baekjoonhub_custom/issues">Request a feature!</a>
+          </div>
         </div>
         <p id="repo_manage_status" class="repo-manage-status"></p>
       </div>
@@ -167,7 +169,6 @@
         <a title="BaekjoonHub GitHub" href="https://github.com/0AndWild/baekjoonhub_custom" target="_blank"><i class="ui black github icon"></i></a>
         <a title="Email" href="mailto:parkky3563@gmail.com" target="_blank"><i class="ui red envelope icon"></i></a>
         <a title="Patch Notes" href="https://github.com/0AndWild/baekjoonhub_custom/blob/main/README.md" target="_blank"><i class="ui list alternate outline icon"></i></a>
-        <a title="BaekjoonHub Home" id="welcome_URL" href="" target="_blank"><i class="ui grey home icon"></i></a>
       </div>
     </div>
 
