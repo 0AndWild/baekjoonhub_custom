@@ -18,16 +18,6 @@
 | `1.1.1` | 코테용 요일별 문제 추천 기능 추가 | 팝업 추천 패널, 요일별 유형(태그) 설정, 난이도 범위 + 추천 개수(`1~10`) 설정, 업로드 문제 제외 추천, 추천 결과 캐시 + `다시 추천 받기`, 추천 설정 원격 저장/불러오기(`baekjoon/extension/setting.json`), 유형 추천조합 초기화 버튼 |
 | `1.2.0` | 팝업 내 GitHub/Repo 관리 통합 + 추천 필터 정합성 개선 | 인증 후 `welcome.html` 이동 없이 팝업에서 repo 생성/연결/해제, GitHub 연결 해제(다른 계정 재인증), 내 repository 목록 선택, repo 트리 기반 BaseDir 선택(하위 디렉토리 탐색), 연결 repo/dir 표시, 자동 업로드 토글 상단 배치, BOJ problemset 기준 유형 목록 동기화, `외국어 문제 제외` 토글 |
 
-## Today Local Commits (2026-03-06)
-
-| Commit | 메시지 | README 반영 내용 |
-|---|---|---|
-| `896f84f` | `feat: add repo finder` | 팝업에서 내 GitHub repository 목록 선택 + repo 트리 기반 BaseDir 선택 흐름 추가 |
-| `25f00c2` | `refactor: refactor linking repo` | repo 연결/해제 및 GitHub 연결 해제를 팝업 단일 흐름으로 통합, welcome 의존도 제거 |
-| `e3fd2e7` | `fix: fix filter missmatching` | BOJ 문제 추천 유형 필터 정합성 개선(필터 목록/매칭 안정화) |
-| `5278ae6` | `cleanup` | 팝업 UI 정리(상단 상태/버튼 배치, 섹션 정돈) |
-
-
 <p align="center">
   <img src="BaekjoonHub-Custom/assets/thumbnail.png" alt="커스텀 썸네일" width="300" />
 </p>
