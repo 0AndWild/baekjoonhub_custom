@@ -1,6 +1,6 @@
 
 
-## Custom Patch Notes (Local)
+## Custom Patch Notes
 
 이 저장소는 기본 BaekjoonHub에 있었으면 하는 기능들을 추가한 커스텀 버전입니다. 이 저장소를 가져다가 추가적인 커스텀을 하셔도 좋고, 좋은 아이디어나 추가 기능에 대한 의견이 있다면 Issue 에 남겨주시면 감사하겠습니다. =) 
 
