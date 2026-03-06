@@ -34,11 +34,9 @@
 
 ### 1) 업로드 Base Directory 지정
 <p align="center">
-  <img src="BaekjoonHub-Custom/assets/home.png" alt="Base Directory 설정" width="400" />
+  <img src="BaekjoonHub-Custom/assets/repo.png" alt="Base Directory 설정" width="400" />
 </p>
-<p align="center">
-  <img src="BaekjoonHub-Custom/assets/success.png" alt="git repo 연동" width="400" />
-</p>
+
 - 배경: 기본 동작은 커밋 폴더가 항상 레포지토리 루트에 생성됨
 - 변경: 사용자가 원하는 시작 경로(예: `src/main/java/problem`)를 지정 가능
 - 결과: 최종 경로가 `BaseDir/플랫폼/레벨/...` 형태로 생성됨
