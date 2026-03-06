@@ -55,11 +55,14 @@ body {
 }
 
 #repo_url {
-  display: inline-block;
-  padding: 6px 10px;
+  display: block;
+  margin: 0 !important;
+  padding: 7px 10px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.75);
-  border: 1px solid var(--line-soft);
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid #d7e4f2;
+  flex: 1;
+  text-align: left;
 }
 
 .commit-note {
@@ -71,6 +74,96 @@ body {
   border-radius: 16px !important;
   box-shadow: 0 12px 22px rgba(15, 35, 55, 0.08);
   background: var(--panel-bg) !important;
+}
+
+.repo-manage-panel {
+  padding: 10px !important;
+}
+
+.repo-manage-title {
+  margin: 0 0 6px !important;
+  font-size: 14px !important;
+  color: #123652 !important;
+}
+
+.repo-manage-help {
+  margin: 0 0 8px;
+  font-size: 11px;
+  color: #667f98;
+}
+
+.repo-manage-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.repo-manage-grid .recommend-setting-row input,
+.repo-manage-grid .recommend-setting-row select {
+  width: 100%;
+  border-radius: 9px !important;
+  border: 1px solid #d0deed !important;
+  background: #fff !important;
+  color: #1f3953 !important;
+}
+
+.repo-manage-grid .recommend-setting-row input {
+  padding: 7px 9px;
+}
+
+.repo-manage-grid .recommend-setting-row label {
+  color: #4f6780;
+  font-weight: 700;
+}
+
+.repo-manage-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.repo-connect-btn.ui.button {
+  border-radius: 10px !important;
+  background: linear-gradient(130deg, var(--brand-main), var(--accent-main)) !important;
+  color: #fff !important;
+  border: none !important;
+  font-weight: 700 !important;
+  box-shadow: 0 7px 16px rgba(17, 110, 174, 0.24);
+}
+
+.repo-connect-btn.ui.button:disabled {
+  opacity: 0.5 !important;
+  box-shadow: none !important;
+}
+
+.repo-linked-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  margin-bottom: 8px;
+}
+
+.repo-unlink-btn.ui.button {
+  border-radius: 10px !important;
+  background: #fff1f1 !important;
+  color: #b4232c !important;
+  border: 1px solid #f1c2c5 !important;
+  font-weight: 700 !important;
+}
+
+.repo-unlink-btn.ui.button:hover {
+  background: #ffe7e8 !important;
+}
+
+.repo-manage-status {
+  margin: 8px 0 0;
+  min-height: 18px;
+  font-size: 11px;
+  color: #35516e;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .recommendation-header {
@@ -372,6 +465,15 @@ body {
 @media (max-width: 480px) {
   body {
     width: 430px;
+  }
+
+  .repo-manage-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .repo-linked-strip {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .recommend-basic-grid {

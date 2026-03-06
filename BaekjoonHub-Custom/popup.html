@@ -29,19 +29,45 @@
 
         <!-- Repo Hook mode -->
         <div id="hook_mode" hidden>
-          <p class="onboarding">
-            <br />
-            Set up repository hook to use
-            <strong>Baekjoon<span style="color: #0078c3">Hub</span></strong>
-          </p>
-          <a id="hook_URL" href="" target="blank" class="ui secondary button">
-            <i class="icon github"></i>
-            Set up Hook
-          </a>
+          <div class="ui segment left aligned modern-panel repo-manage-panel" style="margin-top: 10px">
+            <div class="ui tiny header repo-manage-title">Repository 연결</div>
+            <p class="repo-manage-help">확장을 사용할 GitHub 저장소를 모달에서 바로 생성/연결합니다.</p>
+            <div class="repo-manage-grid">
+              <div class="recommend-setting-row">
+                <label for="repo_setup_type">연결 방식</label>
+                <select id="repo_setup_type" class="ui dropdown compact">
+                  <option value="">선택</option>
+                  <option value="new">새 Private Repository 생성</option>
+                  <option value="link">기존 Repository 연결</option>
+                </select>
+              </div>
+              <div class="recommend-setting-row">
+                <label for="repo_org_option">정리 방식</label>
+                <select id="repo_org_option" class="ui dropdown compact">
+                  <option value="platform">플랫폼 기준 정리</option>
+                  <option value="language">언어 기준 정리</option>
+                </select>
+              </div>
+              <div class="recommend-setting-row">
+                <label for="repo_name">Repository 이름</label>
+                <input id="repo_name" autocomplete="off" type="text" placeholder="예: baekjoon" />
+              </div>
+              <div class="recommend-setting-row">
+                <label for="repo_base_dir">Base Directory (선택)</label>
+                <input id="repo_base_dir" autocomplete="off" type="text" placeholder="예: solved/boj" />
+              </div>
+            </div>
+            <div class="repo-manage-actions">
+              <button id="repo_connect_button" class="ui tiny button repo-connect-btn" disabled>Repo 연결</button>
+            </div>
+          </div>
         </div>
 
         <div id="commit_mode" hidden>
-          <p id="repo_url" class="ui small header" style="margin-top: 5px; margin-bottom: 6px !important"></p>
+          <div class="repo-linked-strip">
+            <p id="repo_url" class="ui small header"></p>
+            <button id="repo_unlink_button" class="ui tiny button repo-unlink-btn">연결 해제</button>
+          </div>
           <div class="ui small header commit-note" style="margin-bottom: 5px; margin-top: 0px !important">
             Want more features?
             <a style="color: rgb(10, 89, 92) !important" target="_blank" href="https://github.com/0AndWild/baekjoonhub_custom/issues">Request a feature!</a>
@@ -104,6 +130,7 @@
             </details>
           </div>
         </div>
+        <p id="repo_manage_status" class="repo-manage-status"></p>
 
         <!-- 기능 on/off -->
         <div style="margin-top: 10px">

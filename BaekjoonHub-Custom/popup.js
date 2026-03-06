@@ -107,6 +107,9 @@ let recommendationInitialized = false;
 let recommendationLoading = false;
 let settingsActionLoading = false;
 let weekdayTagSelections = createDefaultWeekdayTagSelections();
+let repoManageInitialized = false;
+let repoManageLoading = false;
+let currentGithubUsername = '';
 
 $('#authenticate').on('click', () => {
   if (action) {
@@ -117,9 +120,9 @@ $('#authenticate').on('click', () => {
 /* Get URL for welcome page */
 const welcomePageUrl = `chrome-extension://${chrome.runtime.id}/welcome.html`;
 $('#welcome_URL').attr('href', welcomePageUrl);
-$('#hook_URL').attr('href', welcomePageUrl);
 
 initializeRecommendationUI();
+initializeRepoManageUI();
 
 chrome.storage.local.get('BaekjoonHub_token', (data) => {
   const token = data.BaekjoonHub_token;
@@ -134,20 +137,27 @@ chrome.storage.local.get('BaekjoonHub_token', (data) => {
     xhr.addEventListener('readystatechange', function () {
       if (xhr.readyState === 4) {
         if (xhr.status === 200) {
+          let user = {};
+          try {
+            user = JSON.parse(xhr.responseText || '{}');
+          } catch (error) {
+            user = {};
+          }
+          currentGithubUsername = String(user?.login || '');
+          if (currentGithubUsername) {
+            chrome.storage.local.set({ BaekjoonHub_username: currentGithubUsername }, () => { });
+          }
+
           /* Show MAIN FEATURES */
-          chrome.storage.local.get('mode_type', (data2) => {
-            if (data2 && data2.mode_type === 'commit') {
-              $('#commit_mode').show();
+          chrome.storage.local.get(['mode_type', 'BaekjoonHub_hook'], (data2) => {
+            const linkedHook = String(data2?.BaekjoonHub_hook || '');
+            const commitMode = data2 && data2.mode_type === 'commit' && linkedHook.length > 0;
+            if (commitMode) {
+              showCommitMode();
               initializeRecommendationFeature();
-              /* Get problem stats and repo link */
-              chrome.storage.local.get(['stats', 'BaekjoonHub_hook'], (data3) => {
-                const BaekjoonHubHook = data3.BaekjoonHub_hook;
-                if (BaekjoonHubHook) {
-                  $('#repo_url').html(`Your Repo: <a target="blank" style="color: cadetblue !important;" href="https://github.com/${BaekjoonHubHook}">${BaekjoonHubHook}</a>`);
-                }
-              });
+              renderRepoUrl(linkedHook);
             } else {
-              $('#hook_mode').show();
+              showHookMode();
             }
           });
         } else if (xhr.status === 401) {
@@ -186,6 +196,170 @@ chrome.storage.local.get('bjhEnable', (data4) => {
 $('#onffbox').on('click', () => {
   chrome.storage.local.set({ bjhEnable: $('#onffbox').is(':checked') }, () => { });
 });
+
+function showHookMode() {
+  $('#auth_mode').hide();
+  $('#hook_mode').show();
+  $('#commit_mode').hide();
+  $('#repo_connect_button').text('Repo 연결');
+}
+
+function showCommitMode() {
+  $('#auth_mode').hide();
+  $('#hook_mode').hide();
+  $('#commit_mode').show();
+  $('#repo_unlink_button').text('연결 해제');
+}
+
+function renderRepoUrl(hook) {
+  const fullName = String(hook || '').trim();
+  if (!fullName) {
+    $('#repo_url').text('연결된 저장소가 없습니다.');
+    return;
+  }
+  $('#repo_url').html(`Your Repo: <a target="blank" style="color: cadetblue !important;" href="https://github.com/${fullName}">${fullName}</a>`);
+}
+
+function setRepoManageStatus(message) {
+  $('#repo_manage_status').text(String(message || ''));
+}
+
+function setRepoManageLoading(loading) {
+  repoManageLoading = loading;
+  $('#repo_connect_button').prop('disabled', loading || !$('#repo_setup_type').val() || !String($('#repo_name').val() || '').trim());
+  $('#repo_unlink_button').prop('disabled', loading);
+}
+
+function updateRepoConnectButtonState() {
+  if (repoManageLoading) return;
+  const hasType = String($('#repo_setup_type').val() || '').length > 0;
+  const hasName = String($('#repo_name').val() || '').trim().length > 0;
+  $('#repo_connect_button').prop('disabled', !(hasType && hasName));
+}
+
+function initializeRepoManageUI() {
+  if (repoManageInitialized) return;
+  repoManageInitialized = true;
+
+  getStorageLocal(['BaekjoonHub_OrgOption', 'BaekjoonHub_BaseDir', 'BaekjoonHub_hook'])
+    .then((data) => {
+      if (data.BaekjoonHub_OrgOption) {
+        $('#repo_org_option').val(String(data.BaekjoonHub_OrgOption));
+      }
+      if (typeof data.BaekjoonHub_BaseDir === 'string') {
+        $('#repo_base_dir').val(data.BaekjoonHub_BaseDir);
+      }
+      const hook = String(data.BaekjoonHub_hook || '');
+      if (hook && !String($('#repo_name').val() || '').trim()) {
+        const repoName = hook.split('/')[1] || '';
+        $('#repo_name').val(repoName);
+      }
+      updateRepoConnectButtonState();
+    });
+
+  $('#repo_setup_type').on('change', updateRepoConnectButtonState);
+  $('#repo_name').on('input', updateRepoConnectButtonState);
+
+  $('#repo_connect_button').on('click', async () => {
+    if (repoManageLoading) return;
+    setRepoManageLoading(true);
+
+    try {
+      const type = String($('#repo_setup_type').val() || '');
+      const repoName = String($('#repo_name').val() || '').trim();
+      const orgOption = String($('#repo_org_option').val() || 'platform');
+      const baseDir = String($('#repo_base_dir').val() || '').trim();
+
+      if (!type) {
+        throw new Error('연결 방식을 먼저 선택해주세요.');
+      }
+      if (!repoName) {
+        throw new Error('Repository 이름을 입력해주세요.');
+      }
+
+      await setStorageLocal({
+        BaekjoonHub_OrgOption: orgOption,
+        BaekjoonHub_BaseDir: baseDir,
+      });
+
+      const auth = await getStorageLocal(['BaekjoonHub_token', 'BaekjoonHub_username']);
+      const token = auth.BaekjoonHub_token;
+      if (!token) {
+        throw new Error('GitHub 인증이 필요합니다. Authenticate를 먼저 진행해주세요.');
+      }
+
+      setRepoManageStatus('Repository 연결 처리 중...');
+      let repoInfo = null;
+
+      if (type === 'new') {
+        repoInfo = await githubRepoRequest('https://api.github.com/user/repos', token, 'POST', {
+          name: repoName,
+          private: true,
+          auto_init: true,
+          description: 'This is an auto push repository for Baekjoon Online Judge created with [BaekjoonHub Custom](https://github.com/0AndWild/baekjoonhub_custom).',
+        }, '저장소 생성 실패');
+      } else {
+        let username = String(auth.BaekjoonHub_username || currentGithubUsername || '').trim();
+        if (!username) {
+          const user = await githubRepoRequest('https://api.github.com/user', token, 'GET', null, '사용자 조회 실패');
+          username = String(user?.login || '').trim();
+          if (username) {
+            currentGithubUsername = username;
+            await setStorageLocal({ BaekjoonHub_username: username });
+          }
+        }
+        if (!username) {
+          throw new Error('GitHub 사용자 이름을 확인할 수 없습니다. 다시 인증해주세요.');
+        }
+        repoInfo = await githubRepoRequest(`https://api.github.com/repos/${username}/${repoName}`, token, 'GET', null, '저장소 연결 실패');
+      }
+
+      const fullName = String(repoInfo?.full_name || '').trim();
+      if (!fullName) {
+        throw new Error('저장소 정보를 확인하지 못했습니다. 다시 시도해주세요.');
+      }
+      const repoUrl = String(repoInfo?.html_url || `https://github.com/${fullName}`);
+      const stats = {
+        version: chrome.runtime.getManifest().version,
+        submission: {},
+      };
+
+      await setStorageLocal({
+        mode_type: 'commit',
+        repo: repoUrl,
+        BaekjoonHub_hook: fullName,
+        stats,
+      });
+
+      renderRepoUrl(fullName);
+      showCommitMode();
+      initializeRecommendationFeature();
+      setRepoManageStatus(`연결 완료: ${fullName}`);
+    } catch (error) {
+      setRepoManageStatus(`Repo 연결 실패: ${error?.message || String(error)}`);
+    } finally {
+      setRepoManageLoading(false);
+      updateRepoConnectButtonState();
+    }
+  });
+
+  $('#repo_unlink_button').on('click', async () => {
+    if (repoManageLoading) return;
+    setRepoManageLoading(true);
+    try {
+      await setStorageLocal({
+        mode_type: 'hook',
+        BaekjoonHub_hook: null,
+        BaekjoonHub_disOption: 'platform',
+      });
+      showHookMode();
+      setRepoManageStatus('현재 저장소 연결을 해제했습니다. 새 저장소를 연결해주세요.');
+    } finally {
+      setRepoManageLoading(false);
+      updateRepoConnectButtonState();
+    }
+  });
+}
 
 function initializeRecommendationUI() {
   renderLevelSelectOptions();
@@ -1600,6 +1774,35 @@ async function fetchSolvedAcProblemsByIds(problemIds) {
   }
 
   return result;
+}
+
+async function githubRepoRequest(url, token, method = 'GET', body = null, errorPrefix = 'GitHub 요청 실패') {
+  const options = {
+    method,
+    headers: {
+      Authorization: `token ${token}`,
+      Accept: 'application/vnd.github.v3+json',
+    },
+  };
+  if (body !== null && body !== undefined) {
+    options.headers['Content-Type'] = 'application/json';
+    options.body = JSON.stringify(body);
+  }
+
+  const res = await fetch(url, options);
+  let data = null;
+  try {
+    data = await res.json();
+  } catch (error) {
+    data = null;
+  }
+
+  if (!res.ok) {
+    const message = data?.message || `${res.status}`;
+    throw new Error(`${errorPrefix}: ${message}`);
+  }
+
+  return data;
 }
 
 async function githubApiFetch(url, token, errorPrefix) {
