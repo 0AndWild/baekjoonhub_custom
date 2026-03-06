@@ -16,6 +16,16 @@
 |---|---|---|
 | `1.0.0` | 커스텀 업로드 구조/자동화 정비 | Base Directory 지정, 백준 분류+세부 티어 경로 세분화, 문제 디렉토리명 정규화, Java `Main.java` 고정 + `package` 자동 삽입, 백준 맞은 문제 전체 일괄 업로드 |
 | `1.1.1` | 코테용 요일별 문제 추천 기능 추가 | 팝업 추천 패널, 요일별 유형(태그) 설정, 난이도 범위 + 추천 개수(`1~10`) 설정, 업로드 문제 제외 추천, 추천 결과 캐시 + `다시 추천 받기`, 추천 설정 원격 저장/불러오기(`baekjoon/extension/setting.json`), 유형 추천조합 초기화 버튼 |
+| `1.2.0` | 팝업 내 GitHub/Repo 관리 통합 + 추천 필터 정합성 개선 | 인증 후 `welcome.html` 이동 없이 팝업에서 repo 생성/연결/해제, GitHub 연결 해제(다른 계정 재인증), 내 repository 목록 선택, repo 트리 기반 BaseDir 선택(하위 디렉토리 탐색), 연결 repo/dir 표시, 자동 업로드 토글 상단 배치, BOJ problemset 기준 유형 목록 동기화, `외국어 문제 제외` 토글 |
+
+## Today Local Commits (2026-03-06)
+
+| Commit | 메시지 | README 반영 내용 |
+|---|---|---|
+| `896f84f` | `feat: add repo finder` | 팝업에서 내 GitHub repository 목록 선택 + repo 트리 기반 BaseDir 선택 흐름 추가 |
+| `25f00c2` | `refactor: refactor linking repo` | repo 연결/해제 및 GitHub 연결 해제를 팝업 단일 흐름으로 통합, welcome 의존도 제거 |
+| `e3fd2e7` | `fix: fix filter missmatching` | BOJ 문제 추천 유형 필터 정합성 개선(필터 목록/매칭 안정화) |
+| `5278ae6` | `cleanup` | 팝업 UI 정리(상단 상태/버튼 배치, 섹션 정돈) |
 
 
 <p align="center">
@@ -35,8 +45,8 @@
 
 
 적용 코드:
-- `welcome.html`: Base Directory 입력 필드 추가
-- `welcome.js`: `BaekjoonHub_BaseDir` 저장/복원
+- `popup.html`, `popup.js`: BaseDir 선택 UI(Repo 트리 기반) 및 `BaekjoonHub_BaseDir` 저장/복원
+- `welcome.html`, `welcome.js`: (legacy) 온보딩 경로 호환
 - `scripts/storage.js`: 실제 커밋 경로 생성 시 BaseDir prefix 적용
 
 ### 2) 백준 티어 경로 세분화
@@ -118,6 +128,23 @@
 - `css/popup.css`: 추천 패널 스타일 추가
 - `manifest.json`, `rules.json`, `scripts/background.js`: BOJ/solved.ac 요청 권한 및 수집 보강
 
+### 7) 팝업 내 Repository/GitHub 연결 관리 (1.2.0)
+
+- 배경: 기존에는 GitHub 인증 후 `welcome.html`에서 repo를 연결해야 해서 흐름이 분리됨
+- 변경:
+  - 팝업에서 repo 생성/연결/연결 해제 처리
+  - `GitHub 연결 해제` 버튼 추가(토큰/계정 해제 후 재인증 가능)
+  - `link` 모드에서 내 GitHub repository 목록을 불러와 선택
+  - 선택한 repo의 디렉토리 트리를 바탕으로 BaseDir 탐색 선택(`현재 dir 기준 하위 dir` + 상위 이동)
+  - 연결된 `Your Repo`와 `Connected Dir`를 팝업 상단에 표시
+  - 자동 업로드 토글을 상단으로 이동하고 설명 문구 추가
+  - `Request a feature` 문구를 팝업 최하단으로 이동, Home 아이콘 제거
+- 결과: 인증부터 repo 선택/해제, 추천 설정까지 팝업 하나에서 완료 가능
+
+적용 코드:
+- `popup.html`, `popup.js`, `css/popup.css`: repo 관리 UI/UX 및 상태 처리
+- `scripts/background.js`: OAuth 후 welcome 페이지 자동 오픈 제거
+
 ## How To Use This Custom Version
 <p align="center">
   <img src="BaekjoonHub-Custom/assets/chrome.png" alt="chrome extensions" width="400" />
@@ -127,17 +154,20 @@
 3. `압축해제된 확장 프로그램을 로드합니다` 클릭
 4. `manifest.json`이 있는 폴더 선택  
    - 예: `.../BaekjoonHub-Custom/BaekjoonHub-Custom`
-5. 확장 팝업에서 레포를 연결/생성
+5. 확장 팝업에서 `Authenticate`로 GitHub 인증
 <p align="center">
   <img src="BaekjoonHub-Custom/assets/extension.png" alt="extension popup" width="400" />
 </p>
-6. `Base Directory (optional)`에 원하는 시작 경로 입력  
-   - 예: `src/main/java/problem`
+6. 같은 팝업에서 repo 연결
+   - `새 Private Repository 생성` 또는 `기존 Repository 연결`
+   - `기존 Repository 연결` 선택 시 내 repo 목록에서 선택
+   - BaseDir은 repo 트리 선택기로 하위 디렉토리를 탐색해서 선택
 7. 백준 정답 제출 후 자동 커밋 확인
-8. 백준 내 계정 status 페이지(`https://www.acmicpc.net/status?user_id=내아이디`)에서 `BaekjoonHub 전체 업로드` 버튼으로 과거 정답 일괄 업로드
-9. 확장 팝업의 추천 패널에서 설정 후 `문제 추천 받기` 실행
-10. 마음에 들지 않으면 `다시 추천 받기`로 캐시를 무시하고 새 추천 생성
-11. 다른 크롬 계정/환경에서는 `설정 불러오기`로 원격 `setting.json` 설정 복원
+8. 필요 시 `Repo 연결 해제` 또는 `GitHub 연결 해제` 사용
+9. 백준 내 계정 status 페이지(`https://www.acmicpc.net/status?user_id=내아이디`)에서 `BaekjoonHub 전체 업로드` 버튼으로 과거 정답 일괄 업로드
+10. 확장 팝업의 추천 패널에서 설정 후 `문제 추천 받기` 실행
+11. 마음에 들지 않으면 `다시 추천 받기`로 캐시를 무시하고 새 추천 생성
+12. 다른 크롬 계정/환경에서는 `설정 불러오기`로 원격 `setting.json` 설정 복원
 
 ## Bulk Upload UI
 
