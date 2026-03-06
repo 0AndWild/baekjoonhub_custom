@@ -19,7 +19,7 @@ const WEEKDAY_LABELS = {
   sat: '토요일',
 };
 
-const RECOMMEND_TAG_OPTIONS = [
+const FALLBACK_RECOMMEND_TAG_OPTIONS = [
   '구현',
   '시뮬레이션',
   '자료 구조',
@@ -32,7 +32,7 @@ const RECOMMEND_TAG_OPTIONS = [
   '그리디 알고리즘',
   '정렬',
   '이분 탐색',
-  '투 포인터',
+  '두 포인터',
   '누적 합',
   '브루트포스 알고리즘',
   '백트래킹',
@@ -48,12 +48,14 @@ const RECOMMEND_TAG_OPTIONS = [
   '재귀',
 ];
 
+let recommendTagOptions = [...FALLBACK_RECOMMEND_TAG_OPTIONS];
+
 const DEFAULT_WEEKDAY_TAGS = {
   mon: ['구현', '문자열'],
   tue: ['자료 구조', '해시를 사용한 집합과 맵', '스택', '큐'],
   wed: ['그래프 탐색', '트리', '최단 경로'],
   thu: ['다이나믹 프로그래밍'],
-  fri: ['정렬', '이분 탐색', '투 포인터'],
+  fri: ['정렬', '이분 탐색', '두 포인터'],
   sat: ['그리디 알고리즘', '우선순위 큐', '누적 합'],
   sun: ['브루트포스 알고리즘', '백트래킹'],
 };
@@ -191,6 +193,7 @@ function initializeRecommendationUI() {
   loadRecommendationSettings().then((settings) => {
     applyRecommendationSettingsToUI(settings);
   });
+  syncRecommendTagOptionsFromBOJ();
 }
 
 function initializeRecommendationFeature() {
@@ -464,7 +467,7 @@ function renderWeekdayTagInputs() {
   container.empty();
 
   const optionsHtml = ['<option value="">유형 선택</option>']
-    .concat(RECOMMEND_TAG_OPTIONS.map((tag) => `<option value="${escapeHtml(tag)}">${escapeHtml(tag)}</option>`))
+    .concat(recommendTagOptions.map((tag) => `<option value="${escapeHtml(tag)}">${escapeHtml(tag)}</option>`))
     .join('');
 
   WEEKDAY_ORDER.forEach((dayKey) => {
@@ -507,6 +510,75 @@ function renderWeekdayTagInputs() {
   });
 
   WEEKDAY_ORDER.forEach((dayKey) => renderWeekdayTagChips(dayKey));
+}
+
+async function syncRecommendTagOptionsFromBOJ() {
+  try {
+    const problemsetOptions = await fetchBaekjoonProblemsetTagOptions();
+    if (problemsetOptions.length > 0) {
+      recommendTagOptions = problemsetOptions;
+      renderWeekdayTagInputs();
+      return;
+    }
+
+    const tagMap = await fetchBaekjoonTagMap();
+    const tagOptions = Array.from(new Set(
+      (Array.isArray(tagMap?.tagList) ? tagMap.tagList : [])
+        .map((tag) => cleanTagName(tag.name))
+        .filter((name) => name.length > 0)
+    ));
+
+    if (!tagOptions.length) return;
+    recommendTagOptions = tagOptions;
+    renderWeekdayTagInputs();
+  } catch (error) {
+    console.log('Failed to sync recommend tag options from BOJ', error?.message || error);
+  }
+}
+
+async function fetchBaekjoonProblemsetTagOptions() {
+  const url = 'https://www.acmicpc.net/problemset';
+  let html = '';
+
+  const viaBackground = await fetchTextViaBackground(url);
+  if (viaBackground?.ok && typeof viaBackground.text === 'string' && viaBackground.text.length > 0) {
+    html = viaBackground.text;
+  } else {
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        credentials: 'include',
+        cache: 'no-store',
+      });
+      if (res.ok) {
+        html = await res.text();
+      }
+    } catch (error) {
+      html = '';
+    }
+  }
+
+  if (!html) return [];
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+
+  const options = [];
+  const seen = new Set();
+  const addOption = (value) => {
+    const name = cleanTagName(value);
+    if (!name || seen.has(name)) return;
+    seen.add(name);
+    options.push(name);
+  };
+
+  const selectOptions = Array.from(doc.querySelectorAll('select[name="po-algo-s"] option'));
+  selectOptions.forEach((option) => addOption(option.textContent || ''));
+
+  if (options.length === 0) {
+    const dropdownOptions = Array.from(doc.querySelectorAll('.selectize-dropdown-content .option[data-value]'));
+    dropdownOptions.forEach((option) => addOption(option.textContent || ''));
+  }
+
+  return options;
 }
 
 function renderWeekdayTagChips(dayKey) {
