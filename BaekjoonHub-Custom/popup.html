@@ -48,13 +48,22 @@
                   <option value="language">언어 기준 정리</option>
                 </select>
               </div>
-              <div class="recommend-setting-row">
+              <div id="repo_select_row" class="recommend-setting-row" hidden>
+                <label for="repo_select">내 Repository 선택</label>
+                <select id="repo_select" class="ui dropdown compact">
+                  <option value="">Repository를 불러오는 중...</option>
+                </select>
+              </div>
+              <div id="repo_name_row" class="recommend-setting-row">
                 <label for="repo_name">Repository 이름</label>
                 <input id="repo_name" autocomplete="off" type="text" placeholder="예: baekjoon" />
               </div>
-              <div class="recommend-setting-row">
-                <label for="repo_base_dir">Base Directory (선택)</label>
-                <input id="repo_base_dir" autocomplete="off" type="text" placeholder="예: solved/boj" />
+              <div id="repo_base_dir_picker_row" class="recommend-setting-row" hidden>
+                <label for="repo_base_dir_select">Base Directory 선택 (Repo 트리)</label>
+                <select id="repo_base_dir_select" class="ui dropdown compact">
+                  <option value="">하위 디렉토리 선택</option>
+                </select>
+                <div id="repo_base_dir_current" class="repo-base-dir-current"></div>
               </div>
             </div>
             <div class="repo-manage-actions">
@@ -64,9 +73,29 @@
         </div>
 
         <div id="commit_mode" hidden>
-          <div class="repo-linked-strip">
-            <p id="repo_url" class="ui small header"></p>
-            <button id="repo_unlink_button" class="ui tiny button repo-unlink-btn">연결 해제</button>
+          <div class="repo-top-row">
+            <div class="repo-linked-info">
+              <p id="repo_url" class="ui small header"></p>
+              <p id="repo_dir" class="repo-dir-line"></p>
+            </div>
+            <div class="repo-top-actions">
+              <div class="auto-upload-inline">
+                <div class="auto-upload-head">
+                  <span class="auto-upload-label">자동 업로드</span>
+                  <div class="auto-upload-switch">
+                    <input type="checkbox" id="onffbox" />
+                    <label for="onffbox" id="onffmain">
+                      <span id="onffball"></span>
+                    </label>
+                  </div>
+                </div>
+                <p class="auto-upload-help">정답 제출 시 코드를 GitHub에 자동 업로드합니다.</p>
+              </div>
+              <div class="repo-top-action-buttons">
+                <button id="repo_unlink_button" class="ui tiny button repo-unlink-btn">Repo 연결 해제</button>
+                <button id="github_disconnect_button" class="ui tiny button github-disconnect-btn">GitHub 연결 해제</button>
+              </div>
+            </div>
           </div>
           <div class="ui small header commit-note" style="margin-bottom: 5px; margin-top: 0px !important">
             Want more features?
@@ -131,14 +160,6 @@
           </div>
         </div>
         <p id="repo_manage_status" class="repo-manage-status"></p>
-
-        <!-- 기능 on/off -->
-        <div style="margin-top: 10px">
-          <input type="checkbox" id="onffbox" />
-          <label for="onffbox" id="onffmain">
-            <span id="onffball"></span>
-          </label>
-        </div>
       </div>
 
       <!-- Generate Socials -->

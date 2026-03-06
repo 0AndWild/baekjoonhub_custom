@@ -110,6 +110,10 @@ let weekdayTagSelections = createDefaultWeekdayTagSelections();
 let repoManageInitialized = false;
 let repoManageLoading = false;
 let currentGithubUsername = '';
+let repoListCache = null;
+const repoDirOptionsCache = new Map();
+const repoDirBrowsePathByRepo = new Map();
+const REPO_DIR_NAV_UP = '__NAV_UP__';
 
 $('#authenticate').on('click', () => {
   if (action) {
@@ -128,7 +132,7 @@ chrome.storage.local.get('BaekjoonHub_token', (data) => {
   const token = data.BaekjoonHub_token;
   if (token === null || token === undefined) {
     action = true;
-    $('#auth_mode').show();
+    showAuthMode();
   } else {
     // To validate user, load user object from GitHub.
     const AUTHENTICATION_URL = 'https://api.github.com/user';
@@ -149,13 +153,15 @@ chrome.storage.local.get('BaekjoonHub_token', (data) => {
           }
 
           /* Show MAIN FEATURES */
-          chrome.storage.local.get(['mode_type', 'BaekjoonHub_hook'], (data2) => {
+          chrome.storage.local.get(['mode_type', 'BaekjoonHub_hook', 'BaekjoonHub_BaseDir'], (data2) => {
             const linkedHook = String(data2?.BaekjoonHub_hook || '');
+            const baseDir = String(data2?.BaekjoonHub_BaseDir || '');
             const commitMode = data2 && data2.mode_type === 'commit' && linkedHook.length > 0;
             if (commitMode) {
               showCommitMode();
               initializeRecommendationFeature();
               renderRepoUrl(linkedHook);
+              renderRepoDir(baseDir);
             } else {
               showHookMode();
             }
@@ -166,7 +172,7 @@ chrome.storage.local.get('BaekjoonHub_token', (data) => {
           chrome.storage.local.set({ BaekjoonHub_token: null }, () => {
             console.log('BAD oAuth!!! Redirecting back to oAuth process');
             action = true;
-            $('#auth_mode').show();
+            showAuthMode();
           });
         }
       }
@@ -197,6 +203,12 @@ $('#onffbox').on('click', () => {
   chrome.storage.local.set({ bjhEnable: $('#onffbox').is(':checked') }, () => { });
 });
 
+function showAuthMode() {
+  $('#auth_mode').show();
+  $('#hook_mode').hide();
+  $('#commit_mode').hide();
+}
+
 function showHookMode() {
   $('#auth_mode').hide();
   $('#hook_mode').show();
@@ -208,7 +220,8 @@ function showCommitMode() {
   $('#auth_mode').hide();
   $('#hook_mode').hide();
   $('#commit_mode').show();
-  $('#repo_unlink_button').text('연결 해제');
+  $('#repo_unlink_button').text('Repo 연결 해제');
+  $('#github_disconnect_button').text('GitHub 연결 해제');
 }
 
 function renderRepoUrl(hook) {
@@ -220,61 +233,309 @@ function renderRepoUrl(hook) {
   $('#repo_url').html(`Your Repo: <a target="blank" style="color: cadetblue !important;" href="https://github.com/${fullName}">${fullName}</a>`);
 }
 
+function renderRepoDir(baseDir) {
+  const normalized = normalizePathSegment(baseDir);
+  const root = normalized ? `${normalized}/baekjoon` : 'baekjoon';
+  $('#repo_dir').text(`Connected Dir: /${root}`);
+}
+
 function setRepoManageStatus(message) {
   $('#repo_manage_status').text(String(message || ''));
 }
 
+function getRepoSetupType() {
+  return String($('#repo_setup_type').val() || '');
+}
+
+function getSelectedRepoFullName() {
+  return String($('#repo_select').val() || '').trim();
+}
+
+function getTargetRepoName() {
+  const type = getRepoSetupType();
+  if (type === 'link') {
+    const fullName = getSelectedRepoFullName();
+    return fullName.split('/')[1] || '';
+  }
+  return String($('#repo_name').val() || '').trim();
+}
+
 function setRepoManageLoading(loading) {
   repoManageLoading = loading;
-  $('#repo_connect_button').prop('disabled', loading || !$('#repo_setup_type').val() || !String($('#repo_name').val() || '').trim());
+  const disableConnect = loading || !getRepoSetupType() || !getTargetRepoName();
+  $('#repo_connect_button').prop('disabled', disableConnect);
   $('#repo_unlink_button').prop('disabled', loading);
+  $('#github_disconnect_button').prop('disabled', loading);
+  $('#repo_setup_type').prop('disabled', loading);
+  $('#repo_name').prop('disabled', loading || getRepoSetupType() === 'link');
+  $('#repo_select').prop('disabled', loading || getRepoSetupType() !== 'link');
+  $('#repo_org_option').prop('disabled', loading);
+  $('#repo_base_dir_select').prop('disabled', loading || getRepoSetupType() !== 'link');
 }
 
 function updateRepoConnectButtonState() {
   if (repoManageLoading) return;
-  const hasType = String($('#repo_setup_type').val() || '').length > 0;
-  const hasName = String($('#repo_name').val() || '').trim().length > 0;
+  const hasType = getRepoSetupType().length > 0;
+  const hasName = getTargetRepoName().length > 0;
   $('#repo_connect_button').prop('disabled', !(hasType && hasName));
 }
 
-function initializeRepoManageUI() {
+function applyRepoSetupTypeUI(type) {
+  const isLink = type === 'link';
+  $('#repo_select_row').prop('hidden', !isLink);
+  $('#repo_name_row').prop('hidden', isLink);
+  const shouldShowBasePicker = isLink && getSelectedRepoFullName().length > 0;
+  $('#repo_base_dir_picker_row').prop('hidden', !shouldShowBasePicker);
+}
+
+function renderRepoSelectOptions(repos, selectedFullName = '') {
+  const select = $('#repo_select');
+  select.empty();
+  select.append('<option value="">Repository 선택</option>');
+
+  repos.forEach((repo) => {
+    const fullName = String(repo.full_name || '').trim();
+    if (!fullName) return;
+    const label = `${fullName}${repo.private ? ' (private)' : ''}`;
+    select.append(`<option value="${escapeHtml(fullName)}">${escapeHtml(label)}</option>`);
+  });
+
+  if (selectedFullName) {
+    select.val(selectedFullName);
+  }
+}
+
+function normalizeDirectoryPath(path) {
+  return String(path || '')
+    .trim()
+    .replace(/\\/g, '/')
+    .replace(/^\/+/, '')
+    .replace(/\/+$/, '')
+    .replace(/\/{2,}/g, '/');
+}
+
+function getParentDirectoryPath(path) {
+  const normalized = normalizeDirectoryPath(path);
+  if (!normalized) return '';
+  const segments = normalized.split('/');
+  segments.pop();
+  return segments.join('/');
+}
+
+function getImmediateChildDirectories(allDirs, parentPath) {
+  const base = normalizeDirectoryPath(parentPath);
+  const basePrefix = base ? `${base}/` : '';
+  const children = new Set();
+
+  allDirs.forEach((dirPathRaw) => {
+    const dirPath = normalizeDirectoryPath(dirPathRaw);
+    if (!dirPath) return;
+    if (base && !dirPath.startsWith(basePrefix)) return;
+    const rest = base ? dirPath.slice(basePrefix.length) : dirPath;
+    if (!rest) return;
+    const first = rest.split('/')[0];
+    if (!first) return;
+    const childPath = base ? `${base}/${first}` : first;
+    children.add(childPath);
+  });
+
+  return Array.from(children).sort((a, b) => a.localeCompare(b));
+}
+
+function renderRepoBaseDirOptions(dirOptions, currentPath = '') {
+  const select = $('#repo_base_dir_select');
+  const current = normalizeDirectoryPath(currentPath);
+  const currentLabel = current ? current : '/ (repo root)';
+
+  $('#repo_base_dir_current').text(`현재 위치: ${currentLabel}`);
+  select.empty();
+
+  const children = getImmediateChildDirectories(dirOptions, current);
+  select.append('<option value="">하위 디렉토리 선택</option>');
+  if (current) {
+    select.append(`<option value="${REPO_DIR_NAV_UP}">.. (상위 디렉토리)</option>`);
+  }
+  children.forEach((childPath) => {
+    const name = childPath.split('/').pop() || childPath;
+    select.append(`<option value="${escapeHtml(childPath)}">${escapeHtml(name)}</option>`);
+  });
+  select.val('');
+}
+
+async function fetchUserRepositories(token) {
+  const repos = [];
+  for (let page = 1; page <= 3; page += 1) {
+    const url = `https://api.github.com/user/repos?sort=updated&direction=desc&per_page=100&page=${page}`;
+    const pageItems = await githubRepoRequest(url, token, 'GET', null, '내 저장소 목록 조회 실패');
+    if (!Array.isArray(pageItems) || pageItems.length === 0) break;
+    pageItems.forEach((repo) => repos.push(repo));
+    if (pageItems.length < 100) break;
+  }
+  return repos;
+}
+
+async function ensureRepoListLoaded(force = false, preferredFullName = '') {
+  if (!force && Array.isArray(repoListCache) && repoListCache.length > 0) {
+    renderRepoSelectOptions(repoListCache, preferredFullName || getSelectedRepoFullName());
+    return repoListCache;
+  }
+
+  const auth = await getStorageLocal(['BaekjoonHub_token']);
+  const token = auth.BaekjoonHub_token;
+  if (!token) return [];
+
+  setRepoManageStatus('내 repository 목록을 불러오는 중...');
+  const repos = await fetchUserRepositories(token);
+  repoListCache = repos;
+  renderRepoSelectOptions(repos, preferredFullName);
+  if (repos.length === 0) {
+    setRepoManageStatus('불러온 repository가 없습니다.');
+  } else {
+    setRepoManageStatus('');
+  }
+  return repos;
+}
+
+async function fetchRepoDirectoryOptions(fullName, token) {
+  const treeData = await githubRepoRequest(`https://api.github.com/repos/${fullName}/git/trees/HEAD?recursive=1`, token, 'GET', null, 'Repository 디렉토리 트리 조회 실패');
+  const tree = Array.isArray(treeData?.tree) ? treeData.tree : [];
+  const dirs = new Set();
+
+  tree.forEach((item) => {
+    const path = String(item?.path || '');
+    if (!path) return;
+    if (item?.type === 'tree') {
+      dirs.add(path);
+    }
+    const segments = path.split('/').filter((x) => x.length > 0);
+    for (let i = 1; i < segments.length; i += 1) {
+      dirs.add(segments.slice(0, i).join('/'));
+    }
+  });
+
+  return Array.from(dirs).sort((a, b) => {
+    const depthA = a.split('/').length;
+    const depthB = b.split('/').length;
+    if (depthA !== depthB) return depthA - depthB;
+    return a.localeCompare(b);
+  });
+}
+
+async function loadRepoBaseDirOptions(fullName, force = false) {
+  const normalized = String(fullName || '').trim();
+  if (!normalized) {
+    $('#repo_base_dir_picker_row').prop('hidden', true);
+    $('#repo_base_dir_current').text('');
+    return;
+  }
+
+  let dirOptions = repoDirOptionsCache.get(normalized);
+  if (!dirOptions || force) {
+    const auth = await getStorageLocal(['BaekjoonHub_token']);
+    const token = auth.BaekjoonHub_token;
+    if (!token) return;
+    setRepoManageStatus('선택한 repository의 디렉토리 트리를 불러오는 중...');
+    dirOptions = await fetchRepoDirectoryOptions(normalized, token);
+    repoDirOptionsCache.set(normalized, dirOptions);
+  }
+
+  let browsePath = repoDirBrowsePathByRepo.get(normalized) || '';
+  browsePath = normalizeDirectoryPath(browsePath);
+
+  const exists = !browsePath || dirOptions.includes(browsePath);
+  const finalPath = exists ? browsePath : '';
+  repoDirBrowsePathByRepo.set(normalized, finalPath);
+  renderRepoBaseDirOptions(dirOptions, finalPath);
+  $('#repo_base_dir_picker_row').prop('hidden', false);
+  setRepoManageStatus('');
+}
+
+async function initializeRepoManageUI() {
   if (repoManageInitialized) return;
   repoManageInitialized = true;
 
-  getStorageLocal(['BaekjoonHub_OrgOption', 'BaekjoonHub_BaseDir', 'BaekjoonHub_hook'])
-    .then((data) => {
-      if (data.BaekjoonHub_OrgOption) {
-        $('#repo_org_option').val(String(data.BaekjoonHub_OrgOption));
-      }
-      if (typeof data.BaekjoonHub_BaseDir === 'string') {
-        $('#repo_base_dir').val(data.BaekjoonHub_BaseDir);
-      }
-      const hook = String(data.BaekjoonHub_hook || '');
-      if (hook && !String($('#repo_name').val() || '').trim()) {
-        const repoName = hook.split('/')[1] || '';
-        $('#repo_name').val(repoName);
-      }
-      updateRepoConnectButtonState();
-    });
+  const data = await getStorageLocal(['BaekjoonHub_OrgOption', 'BaekjoonHub_BaseDir', 'BaekjoonHub_hook']);
+  if (data.BaekjoonHub_OrgOption) {
+    $('#repo_org_option').val(String(data.BaekjoonHub_OrgOption));
+  }
+  const hook = String(data.BaekjoonHub_hook || '');
+  if (hook && typeof data.BaekjoonHub_BaseDir === 'string') {
+    repoDirBrowsePathByRepo.set(hook, normalizeDirectoryPath(data.BaekjoonHub_BaseDir));
+  }
+  if (hook && !String($('#repo_name').val() || '').trim()) {
+    $('#repo_name').val(hook.split('/')[1] || '');
+  }
 
-  $('#repo_setup_type').on('change', updateRepoConnectButtonState);
+  $('#repo_setup_type').on('change', async () => {
+    const type = getRepoSetupType();
+    applyRepoSetupTypeUI(type);
+    if (type === 'link') {
+      await ensureRepoListLoaded(false, hook);
+      const fullName = getSelectedRepoFullName();
+      if (fullName) {
+        await loadRepoBaseDirOptions(fullName, false);
+      }
+    } else {
+      $('#repo_base_dir_picker_row').prop('hidden', true);
+    }
+    updateRepoConnectButtonState();
+  });
+
   $('#repo_name').on('input', updateRepoConnectButtonState);
+
+  $('#repo_select').on('change', async () => {
+    const fullName = getSelectedRepoFullName();
+    if (fullName) {
+      await loadRepoBaseDirOptions(fullName, false);
+      $('#repo_name').val(fullName.split('/')[1] || '');
+    } else {
+      $('#repo_base_dir_picker_row').prop('hidden', true);
+    }
+    updateRepoConnectButtonState();
+  });
+
+  $('#repo_base_dir_select').on('change', () => {
+    const selected = String($('#repo_base_dir_select').val() || '');
+    const fullName = getSelectedRepoFullName();
+    if (!fullName) return;
+    const dirOptions = repoDirOptionsCache.get(fullName) || [];
+
+    let nextPath = repoDirBrowsePathByRepo.get(fullName) || '';
+    if (selected === REPO_DIR_NAV_UP) {
+      nextPath = getParentDirectoryPath(nextPath);
+    } else if (selected.length > 0) {
+      nextPath = normalizeDirectoryPath(selected);
+    } else {
+      return;
+    }
+
+    const exists = !nextPath || dirOptions.includes(nextPath);
+    const finalPath = exists ? nextPath : '';
+    repoDirBrowsePathByRepo.set(fullName, finalPath);
+    renderRepoBaseDirOptions(dirOptions, finalPath);
+  });
 
   $('#repo_connect_button').on('click', async () => {
     if (repoManageLoading) return;
     setRepoManageLoading(true);
 
     try {
-      const type = String($('#repo_setup_type').val() || '');
-      const repoName = String($('#repo_name').val() || '').trim();
+      const type = getRepoSetupType();
+      const selectedFullName = getSelectedRepoFullName();
+      const repoName = getTargetRepoName();
       const orgOption = String($('#repo_org_option').val() || 'platform');
-      const baseDir = String($('#repo_base_dir').val() || '').trim();
+      const baseDir = type === 'link'
+        ? normalizeDirectoryPath(repoDirBrowsePathByRepo.get(selectedFullName) || '')
+        : '';
 
       if (!type) {
         throw new Error('연결 방식을 먼저 선택해주세요.');
       }
       if (!repoName) {
-        throw new Error('Repository 이름을 입력해주세요.');
+        throw new Error('Repository를 선택하거나 이름을 입력해주세요.');
+      }
+      if (type === 'link' && !selectedFullName) {
+        throw new Error('연결할 Repository를 목록에서 선택해주세요.');
       }
 
       await setStorageLocal({
@@ -282,7 +543,7 @@ function initializeRepoManageUI() {
         BaekjoonHub_BaseDir: baseDir,
       });
 
-      const auth = await getStorageLocal(['BaekjoonHub_token', 'BaekjoonHub_username']);
+      const auth = await getStorageLocal(['BaekjoonHub_token']);
       const token = auth.BaekjoonHub_token;
       if (!token) {
         throw new Error('GitHub 인증이 필요합니다. Authenticate를 먼저 진행해주세요.');
@@ -299,19 +560,7 @@ function initializeRepoManageUI() {
           description: 'This is an auto push repository for Baekjoon Online Judge created with [BaekjoonHub Custom](https://github.com/0AndWild/baekjoonhub_custom).',
         }, '저장소 생성 실패');
       } else {
-        let username = String(auth.BaekjoonHub_username || currentGithubUsername || '').trim();
-        if (!username) {
-          const user = await githubRepoRequest('https://api.github.com/user', token, 'GET', null, '사용자 조회 실패');
-          username = String(user?.login || '').trim();
-          if (username) {
-            currentGithubUsername = username;
-            await setStorageLocal({ BaekjoonHub_username: username });
-          }
-        }
-        if (!username) {
-          throw new Error('GitHub 사용자 이름을 확인할 수 없습니다. 다시 인증해주세요.');
-        }
-        repoInfo = await githubRepoRequest(`https://api.github.com/repos/${username}/${repoName}`, token, 'GET', null, '저장소 연결 실패');
+        repoInfo = await githubRepoRequest(`https://api.github.com/repos/${selectedFullName}`, token, 'GET', null, '저장소 연결 실패');
       }
 
       const fullName = String(repoInfo?.full_name || '').trim();
@@ -332,6 +581,7 @@ function initializeRepoManageUI() {
       });
 
       renderRepoUrl(fullName);
+      renderRepoDir(baseDir);
       showCommitMode();
       initializeRecommendationFeature();
       setRepoManageStatus(`연결 완료: ${fullName}`);
@@ -352,6 +602,7 @@ function initializeRepoManageUI() {
         BaekjoonHub_hook: null,
         BaekjoonHub_disOption: 'platform',
       });
+      renderRepoDir('');
       showHookMode();
       setRepoManageStatus('현재 저장소 연결을 해제했습니다. 새 저장소를 연결해주세요.');
     } finally {
@@ -359,6 +610,52 @@ function initializeRepoManageUI() {
       updateRepoConnectButtonState();
     }
   });
+
+  $('#github_disconnect_button').on('click', async () => {
+    if (repoManageLoading) return;
+    setRepoManageLoading(true);
+    try {
+      await setStorageLocal({
+        BaekjoonHub_token: null,
+        BaekjoonHub_username: null,
+        mode_type: 'hook',
+        BaekjoonHub_hook: null,
+        repo: null,
+      });
+      currentGithubUsername = '';
+      repoListCache = null;
+      repoDirOptionsCache.clear();
+      repoDirBrowsePathByRepo.clear();
+      action = true;
+      renderRepoUrl('');
+      renderRepoDir('');
+      showAuthMode();
+      setRepoManageStatus('GitHub 연결을 해제했습니다. 다른 계정으로 Authenticate 해주세요.');
+    } finally {
+      setRepoManageLoading(false);
+      updateRepoConnectButtonState();
+    }
+  });
+
+  if (!getRepoSetupType()) {
+    $('#repo_setup_type').val('link');
+  }
+
+  const initialType = getRepoSetupType();
+  applyRepoSetupTypeUI(initialType);
+  if (initialType === 'link') {
+    ensureRepoListLoaded(false, hook)
+      .then(async () => {
+        if (hook) {
+          $('#repo_select').val(hook);
+          await loadRepoBaseDirOptions(hook, false);
+        }
+      })
+      .catch((error) => {
+        setRepoManageStatus(`Repository 목록 조회 실패: ${error?.message || String(error)}`);
+      });
+  }
+  updateRepoConnectButtonState();
 }
 
 function initializeRecommendationUI() {

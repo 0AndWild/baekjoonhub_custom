@@ -65,6 +65,19 @@ body {
   text-align: left;
 }
 
+.repo-dir-line {
+  margin: 4px 0 0 !important;
+  padding: 6px 10px;
+  border-radius: 9px;
+  border: 1px solid #dce9f4;
+  background: #f8fcff;
+  color: #48627c;
+  font-size: 11px !important;
+  text-align: left;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .commit-note {
   color: var(--ink-secondary) !important;
 }
@@ -116,6 +129,24 @@ body {
   font-weight: 700;
 }
 
+.repo-manage-grid .recommend-setting-row[hidden] {
+  display: none !important;
+}
+
+#repo_select_row,
+#repo_name_row,
+#repo_base_dir_picker_row {
+  grid-column: span 2;
+}
+
+.repo-base-dir-current {
+  margin-top: 5px;
+  font-size: 11px;
+  color: #5b7691;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .repo-manage-actions {
   display: flex;
   justify-content: flex-end;
@@ -137,24 +168,98 @@ body {
   box-shadow: none !important;
 }
 
-.repo-linked-strip {
+.repo-top-row {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
   margin-top: 4px;
   margin-bottom: 8px;
 }
 
+.repo-linked-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.repo-top-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  min-width: 188px;
+}
+
+.repo-top-action-buttons {
+  display: flex;
+  width: 100%;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.auto-upload-inline {
+  width: 100%;
+  border: 1px solid #d9e7f3;
+  border-radius: 10px;
+  background: #f8fbff;
+  padding: 6px 8px;
+}
+
+.auto-upload-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.auto-upload-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: #254766;
+}
+
+.auto-upload-switch {
+  display: flex;
+  align-items: center;
+}
+
+.auto-upload-help {
+  margin: 4px 0 0;
+  font-size: 10px;
+  color: #5f7892;
+  text-align: left;
+  line-height: 1.35;
+}
+
 .repo-unlink-btn.ui.button {
-  border-radius: 10px !important;
+  border-radius: 9px !important;
   background: #fff1f1 !important;
   color: #b4232c !important;
   border: 1px solid #f1c2c5 !important;
   font-weight: 700 !important;
+  font-size: 11px !important;
+  padding: 6px 10px !important;
+  line-height: 1 !important;
 }
 
 .repo-unlink-btn.ui.button:hover {
   background: #ffe7e8 !important;
+}
+
+.github-disconnect-btn.ui.button {
+  border-radius: 9px !important;
+  background: #f3f6fb !important;
+  color: #2b4b6a !important;
+  border: 1px solid #c9d9ea !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  padding: 6px 10px !important;
+  line-height: 1 !important;
+}
+
+.github-disconnect-btn.ui.button:hover {
+  background: #eaf1f9 !important;
 }
 
 .repo-manage-status {
@@ -471,9 +576,25 @@ body {
     grid-template-columns: 1fr;
   }
 
-  .repo-linked-strip {
+  #repo_select_row,
+  #repo_name_row,
+  #repo_base_dir_picker_row {
+    grid-column: auto;
+  }
+
+  .repo-top-row {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .repo-top-actions {
+    min-width: 0;
+    align-items: flex-end;
+  }
+
+  .repo-top-action-buttons {
+    width: 100%;
+    justify-content: flex-end;
   }
 
   .recommend-basic-grid {
