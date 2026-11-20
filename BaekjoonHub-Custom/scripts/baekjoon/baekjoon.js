@@ -78,10 +78,7 @@ async function beginUpload(bojData) {
 
     /* 현재 제출하려는 소스코드가 기존 업로드한 내용과 같다면 중지 */
     const cachedSHA = await getStatsSHAfromPath(`${hook}/${bojData.directory}/${bojData.fileName}`)
-    const calcSHA = calculateBlobSHA(bojData.code)
-    log('cachedSHA', cachedSHA, 'calcSHA', calcSHA)
-
-    if (cachedSHA == calcSHA) {
+    if (await matchesBojSource(hook, cachedSHA, bojData.code)) {
       markUploadedCSS(stats.branches, bojData.directory);
       console.log(`현재 제출번호를 업로드한 기록이 있습니다.` /* submissionID ${bojData.submissionId}` */);
       return { status: 'skipped' };
@@ -262,8 +259,7 @@ async function beginUploadWithoutUi(bojData) {
     }
 
     const cachedSHA = await getStatsSHAfromPath(`${hook}/${bojData.directory}/${bojData.fileName}`);
-    const calcSHA = calculateBlobSHA(bojData.code);
-    if (cachedSHA == calcSHA) {
+    if (await matchesBojSource(hook, cachedSHA, bojData.code)) {
       return { status: 'skipped' };
     }
 
@@ -285,8 +281,7 @@ async function prepareBulkUploadItem(bojData, hook) {
 
   try {
     const cachedSHA = await getStatsSHAfromPath(`${hook}/${bojData.directory}/${bojData.fileName}`);
-    const calcSHA = calculateBlobSHA(bojData.code);
-    if (cachedSHA == calcSHA) {
+    if (await matchesBojSource(hook, cachedSHA, bojData.code)) {
       return { status: 'skipped' };
     }
     return { status: 'pending', item: bojData };
@@ -344,3 +339,19 @@ async function forceSyncStatsWithRemote() {
   stats.version = getVersion();
   await saveStats(stats);
 }
+
+async function matchesBojSource(hook, storedSHA, code) {
+  if (!storedSHA) return false;
+  if (calculateBlobSHA(code) === storedSHA) return true;
+  const lf = code.replace(/\r\n/g, '\n');
+  if (calculateBlobSHA(lf) === storedSHA || calculateBlobSHA(lf.replace(/\n/g, '\r\n')) === storedSHA) return true;
+
+  // Java submissions can have an LF package declaration and a CRLF body.
+  const token = await getToken();
+  const blob = await fetchGithubJson(`https://api.github.com/repos/${hook}/git/blobs/${storedSHA}`, {
+    headers: { Authorization: `token ${token}` },
+  }, 'compare BOJ source');
+  const bytes = Uint8Array.from(atob(blob.content), c => c.charCodeAt(0));
+  return new TextDecoder('utf-8', { ignoreBOM: true }).decode(bytes).replace(/\r\n/g, '\n') === lf;
+}
+

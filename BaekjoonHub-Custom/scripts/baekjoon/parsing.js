@@ -64,10 +64,10 @@ async function makeDetailMessageAndReadme(data) {
   const sourceCode = extension === 'java'
     ? addPackageDeclarationIfNeeded(code, directory)
     : code;
-  const dateInfo = submissionTime ?? getDateString(new Date(Date.now()));
+  const dateInfo = submissionTime || '확인 불가';
   // prettier-ignore-start
   const readme = `# [${level}] ${title} - ${problemId} \n\n`
-    + `[문제 링크](https://www.acmicpc.net/problem/${problemId}) \n\n`
+    + `[문제 링크](https://acmicpc.net/problem/${problemId}) \n\n`
     + `### 성능 요약\n\n`
     + `메모리: ${memory} KB, `
     + `시간: ${runtime} ms\n\n`
@@ -205,7 +205,7 @@ function parsingResultTableList(doc) {
         case 'submissionTime':
           const el = x.querySelector('a.show-date');
           if (isNull(el)) return null;
-          return el.getAttribute('data-original-title');
+          return readSubmissionTime(el);
         case 'problemId':
           const a = x.querySelector('a.problem_title');
           if (isNull(a)) return null;
@@ -278,7 +278,7 @@ function parseProblemDescription(doc = document) {
 }
 
 async function fetchProblemDescriptionById(problemId) {
-  return fetch(`https://www.acmicpc.net/problem/${problemId}`)
+  return fetch(`/problem/${problemId}`)
     .then((res) => res.text())
     .then((html) => {
       const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -287,8 +287,16 @@ async function fetchProblemDescriptionById(problemId) {
 }
 
 async function fetchSubmitCodeById(submissionId) {
-  return fetch(`https://www.acmicpc.net/source/download/${submissionId}`, { method: 'GET' })
-    .then((res) => res.text())
+  const res = await fetch(`/source/download/${submissionId}`);
+  const type = res.headers.get('content-type') || '';
+  if (!res.ok || /text\/html|application\/xhtml\+xml/i.test(type)) {
+    throw new Error(`BOJ source download failed (${submissionId}, HTTP ${res.status}, ${type})`);
+  }
+  const code = await res.text();
+  if (!code.trim() || /^\s*(?:<!doctype html\b|<html\b)/i.test(code)) {
+    throw new Error(`Invalid BOJ source (${submissionId})`);
+  }
+  return code;
 }
 
 async function fetchSolvedACById(problemId) {
@@ -306,7 +314,7 @@ async function getProblemDescriptionById(problemId) {
 
 async function getSubmitCodeById(submissionId) {
   let code = await getSubmitCodeFromStats(submissionId);
-  if (isNull(code)) {
+  if (isNull(code) || /^\s*(?:<!doctype html\b|<html\b)/i.test(code)) {
     code = await fetchSubmitCodeById(submissionId);
     updateSubmitCodeFromStats({ submissionId, code }); // not await
   }
@@ -408,7 +416,7 @@ async function fetchSubmissionCodeByIds(submissionIds) {
  * @return Promise<Array<String>>
  */
 async function findResultTableByProblemIdAndUsername(problemId, username) {
-  return fetch(`https://www.acmicpc.net/status?from_mine=1&problem_id=${problemId}&user_id=${username}`, { method: 'GET' })
+  return fetch(`/status?from_mine=1&problem_id=${problemId}&user_id=${username}`, { method: 'GET' })
     .then((html) => html.text())
     .then((text) => {
       const parser = new DOMParser();
@@ -433,7 +441,7 @@ async function findUniqueResultTableListByUsername(username) {
  */
 async function findResultTableListByUsername(username) {
   const result = [];
-  let nextUrl = `https://www.acmicpc.net/status?user_id=${username}&result_id=4`;
+  let nextUrl = new URL(`/status?user_id=${encodeURIComponent(username)}&result_id=4`, location.origin).href;
 
   while (!isEmpty(nextUrl)) {
     const doc = await findHtmlDocumentByUrl(nextUrl);
@@ -444,7 +452,7 @@ async function findResultTableListByUsername(username) {
       nextUrl = null;
     } else {
       const href = nextPage.getAttribute('href');
-      nextUrl = isEmpty(href) ? null : new URL(href, 'https://www.acmicpc.net').toString();
+      nextUrl = isEmpty(href) ? null : new URL(href, nextUrl).toString();
     }
   }
 
@@ -485,3 +493,15 @@ function langVersionRemove(lang, ignores) {
 
   return lang;
 }
+
+function readSubmissionTime(el) {
+  const seconds = el.getAttribute('data-timestamp');
+  if (/^\d{1,10}$/.test(seconds)) {
+    const date = new Date((Number(seconds) + 9 * 3600) * 1000);
+    const [day, time] = date.toISOString().split('T');
+    const [year, month, dayOfMonth] = day.split('-');
+    return `${year}년 ${month}월 ${dayOfMonth}일 ${time.slice(0, 8)}`;
+  }
+  return el.getAttribute('data-original-title') || el.getAttribute('title') || null;
+}
+
